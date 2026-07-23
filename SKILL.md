@@ -24,6 +24,7 @@ Treat this command tree as stable across Agent platforms:
 
 ```text
 skill-atlas
+├── install          preview or explicitly apply cross-platform installation
 ├── manage
 │   ├── scan       inventory configured skill roots
 │   ├── status     inspect sources and optional upstream freshness
@@ -50,14 +51,39 @@ skill-atlas
     └── run        stage an execution plan and wait for explicit confirmation
 ```
 
-Commands are read-only by default. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
+Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
 
 Agent command syntax varies. If a platform does not pass arguments after `$skill-atlas` or does not support dollar-prefixed skill calls, accept equivalent natural language such as "Use Skill Atlas manage" or "用 Skill Atlas 编排这个任务". Preserve the four command meanings across platforms.
+
+The bundled `commands/skill-atlas.md` is a portable slash-command adapter for
+platforms that load Markdown command files. Use the installer below to register
+it; copying the skill folder alone does not register a slash command. Codex uses
+`$skill-atlas` or natural-language invocation rather than a custom
+`/skill-atlas` menu entry.
+
+Preview a cross-platform installation from a cloned or downloaded package:
+
+```bash
+python3 scripts/skill_atlas.py install --all-platforms --commands
+```
+
+After reviewing every destination and target, apply it explicitly:
+
+```bash
+python3 scripts/skill_atlas.py install --all-platforms --commands --apply --confirm
+```
+
+The installer keeps one canonical copy under `~/.agents/skills/skill-atlas`,
+creates platform skill links, and registers `/skill-atlas` for OpenCode and
+Claude Code. It never overwrites an existing path. Re-running the same install
+is idempotent. Use repeated `--platform codex|opencode|claude` instead of
+`--all-platforms` for a subset.
 
 Use the deterministic CLI when direct script execution is appropriate:
 
 ```bash
 python3 <skill-root>/scripts/skill_atlas.py manage
+python3 <skill-root>/scripts/skill_atlas.py install --all-platforms --commands
 python3 <skill-root>/scripts/skill_atlas.py manage status
 python3 <skill-root>/scripts/skill_atlas.py manage self status
 python3 <skill-root>/scripts/skill_atlas.py discover competitors ux-audit
@@ -408,6 +434,7 @@ Before running `update`, make sure the target skill has a recorded `evolution.js
 ## Safety Rules
 
 - Never overwrite `SKILL.md` during audit.
+- Never apply installation without both `--apply` and `--confirm`; refuse all conflicts before creating the canonical copy or any link.
 - Never delete duplicate skills during audit.
 - Never assume one platform's installed skill is usable by another platform unless it is under that platform's configured root or symlinked there.
 - Prefer symlinks or one canonical source when the user wants to share one skill across Codex, OpenCode, and Claude.
