@@ -13,6 +13,7 @@ from typing import Any
 
 import audit_skills
 import discovery_brief
+import install_skill_atlas
 import recommend_skills
 import self_update
 
@@ -135,6 +136,16 @@ def handle_manage_self(args: argparse.Namespace) -> None:
         json_print(result) if args.format == "json" else self_update.emit_markdown(result)
         raise SystemExit(2) from None
     json_print(result) if args.format == "json" else self_update.emit_markdown(result)
+
+
+def handle_install(args: argparse.Namespace) -> None:
+    try:
+        result = install_skill_atlas.run(args)
+    except (OSError, install_skill_atlas.InstallError, self_update.UpdateError) as exc:
+        result = {"action": "install", "status": "refused", "error": str(exc)}
+        json_print(result) if args.format == "json" else print(f"Installation refused: {exc}")
+        raise SystemExit(2) from None
+    json_print(result) if args.format == "json" else install_skill_atlas.emit_markdown(result)
 
 
 def discovery_records(args: argparse.Namespace) -> list[dict[str, Any]]:
@@ -372,6 +383,24 @@ def add_discover_commands(subparsers: argparse._SubParsersAction) -> None:
         action.set_defaults(handler=handle_discover)
 
 
+def add_install_command(subparsers: argparse._SubParsersAction) -> None:
+    install = subparsers.add_parser(
+        "install", help="Install Skill Atlas and optional platform command adapters."
+    )
+    selection = install.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--all-platforms", action="store_true")
+    selection.add_argument(
+        "--platform", action="append", choices=install_skill_atlas.PLATFORMS, default=[]
+    )
+    install.add_argument("--commands", action="store_true", help="Register slash commands where supported.")
+    install.add_argument("--source", help="Skill Atlas package root; defaults to this package.")
+    install.add_argument("--home", default=str(Path.home()), help="Target user home directory.")
+    install.add_argument("--apply", action="store_true")
+    install.add_argument("--confirm", action="store_true")
+    add_output(install, ["markdown", "json"])
+    install.set_defaults(handler=handle_install)
+
+
 def add_recommend_commands(subparsers: argparse._SubParsersAction) -> None:
     recommend = subparsers.add_parser("recommend", help="Recommend skills for products, tasks, models, or tools.")
     actions = recommend.add_subparsers(dest="action", required=True)
@@ -409,6 +438,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Manage, discover, recommend, and orchestrate agent skills.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     add_manage_commands(subparsers)
+    add_install_command(subparsers)
     add_discover_commands(subparsers)
     add_recommend_commands(subparsers)
     add_orchestrate_commands(subparsers)
