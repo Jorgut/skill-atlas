@@ -99,15 +99,27 @@ User-authored skills are protected. Competitors are references for comparison an
 ### Choose Skills for a Product
 
 ```text
-$skill-atlas recommend product I want to build an automotive HMI design tool
+$skill-atlas recommend product I want to build an automotive HMI design tool --mode balanced
 ```
 
 Skill Atlas separates installed skills, suggested execution order, missing capabilities, and external models, plugins, MCP servers, or software integrations.
 
+Both recommendation and orchestration support three research modes:
+
+| Mode | Behavior | Use it for |
+| --- | --- | --- |
+| `quick` | Uses local skills first and searches externally only for missing capabilities | Fast starts |
+| `balanced` | Default; compares every capability with three public candidates even when local matches exist | Normal product decisions |
+| `benchmark` | Targets eight candidates per capability and adds deeper eval, maintenance, license, compatibility, and security queries | High-stakes selection |
+
+Local and public candidates use the same 100-point rubric: task fit 30, workflow quality 20, eval evidence 15, maintenance 10, source and license 10, compatibility 10, and safety 5.
+
+The CLI creates an external research worklist; it does not browse the web itself. A `provisional` result still requires the active Agent to execute the searches, inspect source code, complete security review, and score the candidates.
+
 Validate the proposed combination:
 
 ```text
-$skill-atlas orchestrate validate I want to build an automotive HMI design tool
+$skill-atlas orchestrate validate I want to build an automotive HMI design tool --mode balanced
 ```
 
 ### Find Professional Software Integrations
@@ -206,4 +218,3 @@ python3 ~/.agents/skills/skill-atlas/scripts/skill_atlas.py manage self status
 ```
 
 The beta version does not perform unattended network updates. Review a release before applying `manage self update`.
-

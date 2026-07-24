@@ -111,7 +111,7 @@ Skill Atlas 会保护 `user-authored` Skill：竞品只用于学习和比较，�
 ### 场景 C：不知道产品需要哪些 Skill
 
 ```text
-$skill-atlas recommend product 我想制作一款汽车 HMI 设计工具
+$skill-atlas recommend product 我想制作一款汽车 HMI 设计工具 --mode balanced
 ```
 
 它会区分：
@@ -121,10 +121,22 @@ $skill-atlas recommend product 我想制作一款汽车 HMI 设计工具
 - 缺失能力
 - 需要另外研究的模型、MCP、插件或专业软件接口
 
+推荐和编排都支持三种研究模式：
+
+| 模式 | 行为 | 适合场景 |
+| --- | --- | --- |
+| `quick` | 先用本机 Skill，只为缺失能力生成站外搜索 | 快速开始、时间有限 |
+| `balanced` | 默认模式；即使本机已有 Skill，也为每项能力寻找 3 个站外候选做同标准对比 | 日常产品决策 |
+| `benchmark` | 为每项能力寻找 8 个候选，并增加 eval、维护、许可证、兼容性和安全查询 | 重要选型、正式竞品研究 |
+
+本机和站外候选使用同一个 100 分标准：任务匹配 30、工作流质量 20、eval 证据 15、维护 10、来源与许可证 10、兼容性 10、安全 5。
+
+命令行程序只会生成站外研究清单，不会自己联网完成搜索。结果显示 `provisional` 时，应让当前 Agent 真正执行搜索、检查源码和安全性，再给出最终比较。
+
 再检查组合是否合理：
 
 ```text
-$skill-atlas orchestrate validate 我想制作一款汽车 HMI 设计工具
+$skill-atlas orchestrate validate 我想制作一款汽车 HMI 设计工具 --mode balanced
 ```
 
 ### 场景 D：Rhino、Blender、SketchUp 等专业软件
