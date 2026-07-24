@@ -1,6 +1,6 @@
 ---
 name: skill-atlas
-description: Audit, discover, recommend, orchestrate, monitor, and safely manage agent skills across Codex, OpenCode, Claude-style agents, plugin caches, and configurable skill roots. Use when the user wants to inventory installed skills, detect duplicates or symlinks, check upstream freshness, compare public alternatives once or periodically, review third-party skill safety, plan cross-platform consolidation, describe a product or professional task and ask which skills should be combined, compare current AI models for a workflow, or find skills and connectors for software such as design, HMI, animation, CAD, and 3D modeling tools. The skill is platform-neutral and local-first. It reports and recommends before acting; it must not overwrite, delete, symlink, install, or upgrade skills without explicit confirmation.
+description: Audit, discover, recommend, orchestrate, monitor, and safely manage agent skills across Codex, OpenCode, Claude-style agents, plugin caches, and configurable skill roots. Use when the user wants to inventory installed skills, detect duplicates or symlinks, check upstream freshness, compare public alternatives once or periodically, review third-party skill safety, plan cross-platform consolidation, describe a product or professional task and ask which skills should be combined, compare current AI models for a workflow, or find skills and connectors for software such as design, HMI, animation, CAD, and 3D modeling tools. The skill is platform-neutral and local-aware. It reports and recommends before acting; it must not overwrite, delete, symlink, install, or upgrade skills without explicit confirmation.
 ---
 
 # Skill Atlas
@@ -96,9 +96,9 @@ python3 <skill-root>/scripts/skill_atlas.py install --all-platforms --commands
 python3 <skill-root>/scripts/skill_atlas.py manage status
 python3 <skill-root>/scripts/skill_atlas.py manage self status
 python3 <skill-root>/scripts/skill_atlas.py discover competitors ux-audit
-python3 <skill-root>/scripts/skill_atlas.py recommend product "Design an automotive HMI"
-python3 <skill-root>/scripts/skill_atlas.py recommend model "Product animation"
-python3 <skill-root>/scripts/skill_atlas.py orchestrate validate "Create product animation"
+python3 <skill-root>/scripts/skill_atlas.py recommend product "Design an automotive HMI" --mode balanced
+python3 <skill-root>/scripts/skill_atlas.py recommend model "Product animation" --mode benchmark
+python3 <skill-root>/scripts/skill_atlas.py orchestrate validate "Create product animation" --mode balanced
 python3 <skill-root>/scripts/skill_atlas.py monitor add closeout --interval monthly
 python3 <skill-root>/scripts/skill_atlas.py monitor due
 ```
@@ -184,13 +184,21 @@ Natural-language trigger examples:
 
 On platforms that expose skills as slash commands, invoke the platform's command for `skill-atlas` and include the request. Do not promise one universal slash-command syntax because platforms differ.
 
-1. Run the local-first recommendation command:
+1. Choose the research depth and run the recommendation command. `balanced` is the default:
 
 ```bash
-python3 <skill-root>/scripts/recommend_skills.py --request "Describe the task, product, model question, or software workflow" --format markdown
+python3 <skill-root>/scripts/skill_atlas.py recommend product \
+  "Describe the task, product, model question, or software workflow" \
+  --mode balanced
 ```
 
 Add one or more `--root /path/to/skills` options when the user's platform stores skills elsewhere.
+
+- `quick`: inspect local skills first and create external skill searches only for missing capabilities
+- `balanced`: inspect local skills and create an external comparison plan for every required capability; target three public candidates per capability
+- `benchmark`: perform the broadest comparison planning for every capability; target eight public candidates with deeper queries
+
+The deterministic CLI does not browse the internet. In `balanced` and `benchmark`, treat `external_comparison_plan` as work for the active Agent: search current public sources, inspect the candidate code, and score local and external candidates with the same 100-point rubric. Keep the recommendation status `provisional` until that work is complete.
 
 2. Return these sections when applicable:
 
@@ -199,6 +207,8 @@ Add one or more `--root /path/to/skills` options when the user's platform stores
 - `Suggested Orchestration`: an ordered research, design, production, and verification stack with primary, support, and reviewer roles
 - `Platform-Managed Matches`: useful plugin/cache matches that may be available only through their owning tool and must not be edited in place
 - `External Search Gaps`: missing capabilities plus focused queries for public skill discovery
+- `External Benchmark Plan`: local candidates, external search queries, candidate targets, and required checks for each capability
+- `Comparison Rubric`: task fit 30, workflow quality 20, eval evidence 15, maintenance 10, source and license 10, compatibility 10, safety 5
 - `Models, Tools, and Domain Research`: time-sensitive AI model comparisons, domain standards, application APIs, MCP connectors, plugins, or automation interfaces that are not themselves skills
 
 3. Recommend a minimal stack. Prefer one primary production skill per capability. Add a complementary reviewer or verifier only when it checks a different quality dimension. Do not run two overlapping generator skills as equal primaries without explaining how their outputs will be compared or merged.

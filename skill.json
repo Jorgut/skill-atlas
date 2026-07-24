@@ -2,7 +2,7 @@
   "schema_version": 1,
   "name": "skill-atlas",
   "display_name": "Skill Atlas",
-  "version": "0.3.0-beta",
+  "version": "0.4.0-beta",
   "channel": "stable",
   "update_policy": "notify",
   "repository": "https://github.com/Jorgut/skill-atlas"

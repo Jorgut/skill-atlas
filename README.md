@@ -1,6 +1,6 @@
 # Skill Atlas
 
-Skill Atlas is a local-first, cross-platform manager for agent skills. It inventories installed skills, detects duplicates and symlinks, plans updates and consolidation, discovers alternatives and competitors, recommends skill stacks for products and professional workflows, and validates multi-skill orchestration.
+Skill Atlas is a local-aware, cross-platform manager for agent skills. It inventories installed skills, detects duplicates and symlinks, plans updates and consolidation, discovers alternatives and competitors, recommends skill stacks for products and professional workflows, and validates multi-skill orchestration.
 
 It supports Codex, OpenCode, Claude Code, shared `~/.agents/skills` installations, plugin caches, and custom skill roots. Read-only planning is the default.
 
@@ -71,9 +71,9 @@ Examples using the deterministic CLI:
 python3 scripts/skill_atlas.py manage
 python3 scripts/skill_atlas.py manage status --check-upstream
 python3 scripts/skill_atlas.py discover competitors ux-audit
-python3 scripts/skill_atlas.py recommend product "Build a product animation platform"
-python3 scripts/skill_atlas.py recommend tool "Rhino, Grasshopper, Blender, and SketchUp"
-python3 scripts/skill_atlas.py orchestrate validate "Design an automotive HMI"
+python3 scripts/skill_atlas.py recommend product "Build a product animation platform" --mode balanced
+python3 scripts/skill_atlas.py recommend tool "Rhino, Grasshopper, Blender, and SketchUp" --mode benchmark
+python3 scripts/skill_atlas.py orchestrate validate "Design an automotive HMI" --mode balanced
 python3 scripts/skill_atlas.py monitor add closeout --interval monthly
 python3 scripts/skill_atlas.py monitor due
 ```
@@ -85,6 +85,20 @@ With `/skill-atlas` or `$skill-atlas`, the rest of the line is the request. Natu
 $skill-atlas find Rhino and Blender skills, connectors, and missing capabilities
 Use Skill Atlas to compare my UX skill with public competitors without replacing mine.
 ```
+
+## Recommendation Modes
+
+`recommend` and `orchestrate` accept the same `--mode` option:
+
+| Mode | Behavior | Best for |
+| --- | --- | --- |
+| `quick` | Uses installed skills first and creates public-skill searches only for missing capabilities | Fast local planning |
+| `balanced` | Default. Compares every required capability against three public candidates, even when a local match exists | Normal product decisions |
+| `benchmark` | Expands every capability to eight candidates and deeper eval, maintenance, license, compatibility, and security queries | High-stakes selection |
+
+Local and public candidates use one 100-point rubric: task fit 30, workflow quality 20, eval evidence 15, maintenance 10, source and license 10, compatibility 10, and safety 5.
+
+The deterministic CLI creates an external research worklist; it does not browse the web by itself. A `provisional` result means the Agent must execute those searches, inspect sources, and score the candidates before claiming the comparison is complete.
 
 ## Recurring Competitor Comparisons
 
@@ -136,7 +150,7 @@ A clean static scan is a gate, not proof that third-party code is safe. Review s
 
 ## Updating Skill Atlas
 
-Skill Atlas does not silently update itself. Version `0.3.0-beta` supports reviewed local release directories and checksum-verified archives.
+Skill Atlas does not silently update itself. Version `0.4.0-beta` supports reviewed local release directories and checksum-verified archives.
 
 Inspect the current installation:
 
@@ -183,4 +197,4 @@ See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, dis
 
 ## Status
 
-Skill Atlas is currently `0.3.0-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.4.0-beta`. Interfaces and platform adapters may change before the stable release.
