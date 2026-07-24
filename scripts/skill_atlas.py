@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import audit_skills
+import competitor_monitor
 import discovery_brief
 import install_skill_atlas
 import recommend_skills
@@ -22,6 +23,7 @@ MANAGE_ACTIONS = {"scan", "status", "update", "dedupe", "sync", "self"}
 DISCOVER_ACTIONS = {"similar", "competitors", "alternatives", "gaps"}
 RECOMMEND_ACTIONS = {"product", "task", "model", "tool"}
 ORCHESTRATE_ACTIONS = {"plan", "validate", "run"}
+MONITOR_ACTIONS = {"add", "list", "status", "due", "run", "history", "remove"}
 
 
 def add_output(parser: argparse.ArgumentParser, choices: list[str]) -> None:
@@ -210,6 +212,96 @@ def handle_discover(args: argparse.Namespace) -> None:
     json_print(payload) if args.format == "json" else emit_discovery_markdown(payload)
 
 
+def monitor_store(args: argparse.Namespace) -> competitor_monitor.MonitorStore:
+    return competitor_monitor.MonitorStore(Path(args.state_dir))
+
+
+def monitor_status(store: competitor_monitor.MonitorStore, monitor: dict[str, Any]) -> dict[str, Any]:
+    result = dict(monitor)
+    result["due"] = competitor_monitor.parse_time(monitor["next_run_at"]) <= competitor_monitor.utc_now()
+    result["history_count"] = len(store.history(monitor["id"]))
+    return result
+
+
+def emit_monitor_markdown(payload: dict[str, Any]) -> None:
+    print(f"# Skill Atlas Monitor {payload['action'].title()}")
+    print()
+    if payload.get("message"):
+        print(payload["message"])
+        print()
+    monitors = payload.get("monitors", [])
+    for monitor in monitors:
+        print(f"- {monitor['id']}: {monitor['query']}")
+        if monitor.get("interval"):
+            print(f"  - interval: {monitor['interval']}")
+        if monitor.get("next_run_at"):
+            print(f"  - next run: {monitor['next_run_at']}")
+        if "due" in monitor:
+            print(f"  - due: {str(monitor['due']).lower()}")
+        if "history_count" in monitor:
+            print(f"  - snapshots: {monitor['history_count']}")
+    if payload.get("snapshot"):
+        snapshot = payload["snapshot"]
+        print(f"- monitor: {snapshot['monitor_id']}")
+        print(f"- status: {snapshot['status']}")
+        print(f"- snapshot: {payload['snapshot_path']}")
+        if snapshot["status"] == "research-required":
+            print("- next step: let an Agent perform the packet's web research, security review, and scoring, then rerun with --results")
+        elif snapshot.get("changes"):
+            print(f"- added: {len(snapshot['changes']['added'])}")
+            print(f"- removed: {len(snapshot['changes']['removed'])}")
+            print(f"- unchanged: {len(snapshot['changes']['unchanged'])}")
+    if payload.get("history") is not None:
+        for snapshot in payload["history"]:
+            print(f"- {snapshot['run_at']}: {snapshot['status']} ({len(snapshot.get('candidates', []))} candidates)")
+
+
+def handle_monitor(args: argparse.Namespace) -> None:
+    store = monitor_store(args)
+    try:
+        if args.action == "add":
+            monitor = store.add(args.name, args.query or args.name, args.interval)
+            payload = {"action": "add", "monitors": [monitor], "message": "Monitor created and due immediately."}
+        elif args.action == "list":
+            payload = {"action": "list", "monitors": store.load()["monitors"]}
+        elif args.action == "status":
+            _, monitor = store.get(args.monitor_id)
+            payload = {"action": "status", "monitors": [monitor_status(store, monitor)]}
+        elif args.action == "due":
+            payload = {"action": "due", "monitors": store.due()}
+        elif args.action == "remove":
+            if not args.confirm:
+                raise competitor_monitor.MonitorError("Removing a monitor requires --confirm.")
+            removed = store.remove(args.monitor_id)
+            payload = {"action": "remove", "monitors": [removed], "message": "Monitor configuration removed; snapshots were retained."}
+        elif args.action == "history":
+            payload = {"action": "history", "history": store.history(args.monitor_id), "monitors": []}
+        else:
+            _, monitor = store.get(args.monitor_id)
+            discovery_args = argparse.Namespace(
+                action="competitors",
+                query=monitor["query"],
+                root=args.root,
+                limit=args.limit,
+            )
+            packet = discovery_payload(discovery_args)
+            results = competitor_monitor.validate_results(
+                json.loads(Path(args.results).read_text(encoding="utf-8"))
+            ) if args.results else None
+            snapshot = store.record_run(args.monitor_id, packet, results)
+            _, updated_monitor = store.get(args.monitor_id)
+            payload = {
+                "action": "run",
+                "snapshot": snapshot,
+                "snapshot_path": updated_monitor["last_snapshot"],
+                "monitors": [],
+            }
+    except (OSError, json.JSONDecodeError, competitor_monitor.MonitorError) as exc:
+        print(f"Monitor refused: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    json_print(payload) if args.format == "json" else emit_monitor_markdown(payload)
+
+
 def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
     request = args.request
     if args.action == "model":
@@ -322,10 +414,11 @@ def normalize_legacy_args(argv: list[str]) -> list[str]:
         "discover": DISCOVER_ACTIONS,
         "recommend": RECOMMEND_ACTIONS,
         "orchestrate": ORCHESTRATE_ACTIONS,
+        "monitor": MONITOR_ACTIONS,
     }.get(command)
     if not actions or len(argv) > 1 and argv[1] in actions | {"-h", "--help"}:
         return argv
-    defaults = {"manage": "scan", "discover": "similar", "recommend": "task", "orchestrate": "plan"}
+    defaults = {"manage": "scan", "discover": "similar", "recommend": "task", "orchestrate": "plan", "monitor": "list"}
     return [command, defaults[command], *argv[1:]]
 
 
@@ -434,14 +527,60 @@ def add_orchestrate_commands(subparsers: argparse._SubParsersAction) -> None:
         action.set_defaults(handler=handle_orchestrate)
 
 
+def add_monitor_commands(subparsers: argparse._SubParsersAction) -> None:
+    monitor = subparsers.add_parser("monitor", help="Schedule and track recurring competitor comparisons.")
+    actions = monitor.add_subparsers(dest="action", required=True)
+    default_state = str(Path.home() / ".local/share/skill-atlas")
+
+    add = actions.add_parser("add", help="Create a recurring competitor monitor.")
+    add.add_argument("name", help="Stable monitor name.")
+    add.add_argument("query", nargs="?", help="Comparison focus; defaults to the monitor name.")
+    add.add_argument("--interval", choices=competitor_monitor.INTERVALS, default="monthly")
+    add.add_argument("--state-dir", default=default_state)
+    add_output(add, ["markdown", "json"])
+    add.set_defaults(handler=handle_monitor)
+
+    for name, help_text in [
+        ("list", "List configured monitors."),
+        ("due", "List monitors whose next comparison is due."),
+    ]:
+        action = actions.add_parser(name, help=help_text)
+        action.add_argument("--state-dir", default=default_state)
+        add_output(action, ["markdown", "json"])
+        action.set_defaults(handler=handle_monitor)
+
+    for name, help_text in [
+        ("status", "Show schedule and snapshot status for one monitor."),
+        ("history", "Show saved comparison snapshots."),
+        ("remove", "Remove a monitor configuration while retaining snapshots."),
+    ]:
+        action = actions.add_parser(name, help=help_text)
+        action.add_argument("monitor_id")
+        action.add_argument("--state-dir", default=default_state)
+        if name == "remove":
+            action.add_argument("--confirm", action="store_true")
+        add_output(action, ["markdown", "json"])
+        action.set_defaults(handler=handle_monitor)
+
+    run = actions.add_parser("run", help="Create a research packet or record completed comparison results.")
+    run.add_argument("monitor_id")
+    run.add_argument("--results", help="Agent-produced JSON containing summary and candidates.")
+    run.add_argument("--state-dir", default=default_state)
+    add_roots(run)
+    run.add_argument("--limit", type=int, default=20)
+    add_output(run, ["markdown", "json"])
+    run.set_defaults(handler=handle_monitor)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Manage, discover, recommend, and orchestrate agent skills.")
+    parser = argparse.ArgumentParser(description="Manage, discover, recommend, orchestrate, and monitor agent skills.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     add_manage_commands(subparsers)
     add_install_command(subparsers)
     add_discover_commands(subparsers)
     add_recommend_commands(subparsers)
     add_orchestrate_commands(subparsers)
+    add_monitor_commands(subparsers)
     return parser.parse_args(normalize_legacy_args(list(sys.argv[1:] if argv is None else argv)))
 
 
