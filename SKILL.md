@@ -1,6 +1,6 @@
 ---
 name: skill-atlas
-description: Audit, discover, recommend, orchestrate, and safely manage agent skills across Codex, OpenCode, Claude-style agents, plugin caches, and configurable skill roots. Use when the user wants to inventory installed skills, detect duplicates or symlinks, check upstream freshness, compare public alternatives, review third-party skill safety, plan cross-platform consolidation, describe a product or professional task and ask which skills should be combined, compare current AI models for a workflow, or find skills and connectors for software such as design, HMI, animation, CAD, and 3D modeling tools. The skill is platform-neutral and local-first. It reports and recommends before acting; it must not overwrite, delete, symlink, install, or upgrade skills without explicit confirmation.
+description: Audit, discover, recommend, orchestrate, monitor, and safely manage agent skills across Codex, OpenCode, Claude-style agents, plugin caches, and configurable skill roots. Use when the user wants to inventory installed skills, detect duplicates or symlinks, check upstream freshness, compare public alternatives once or periodically, review third-party skill safety, plan cross-platform consolidation, describe a product or professional task and ask which skills should be combined, compare current AI models for a workflow, or find skills and connectors for software such as design, HMI, animation, CAD, and 3D modeling tools. The skill is platform-neutral and local-first. It reports and recommends before acting; it must not overwrite, delete, symlink, install, or upgrade skills without explicit confirmation.
 ---
 
 # Skill Atlas
@@ -16,6 +16,7 @@ Choose the workflow from the request:
 - inventory, duplicates, updates, symlinks, or consolidation: run the audit workflow
 - a product idea, professional task, model question, or software workflow with uncertainty about which capabilities to use: run recommendation and orchestration
 - stronger alternatives or competitors for installed skills: run external discovery
+- recurring competitor comparison with historical differences: run monitor
 - a downloaded or proposed third-party skill: run strict security review
 
 ## Commands
@@ -45,15 +46,23 @@ skill-atlas
 │   ├── task       recommend skills for a concrete task
 │   ├── model      identify evaluation skills and current model research
 │   └── tool       identify skills, APIs, plugins, MCP, and software connectors
-└── orchestrate
+├── orchestrate
     ├── plan       build an ordered multi-skill workflow
     ├── validate   check role overlap, duplication, and capability gaps
     └── run        stage an execution plan and wait for explicit confirmation
+└── monitor
+    ├── add        create a daily, weekly, monthly, or quarterly monitor
+    ├── list       list monitor configurations
+    ├── status     inspect one schedule and its snapshot count
+    ├── due        list comparisons whose next run is due
+    ├── run        create a research packet or record reviewed results
+    ├── history    compare saved snapshots over time
+    └── remove     remove configuration while retaining snapshots
 ```
 
 Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
 
-Agent command syntax varies. If a platform does not pass arguments after `$skill-atlas` or does not support dollar-prefixed skill calls, accept equivalent natural language such as "Use Skill Atlas manage" or "用 Skill Atlas 编排这个任务". Preserve the four command meanings across platforms.
+Agent command syntax varies. If a platform does not pass arguments after `$skill-atlas` or does not support dollar-prefixed skill calls, accept equivalent natural language such as "Use Skill Atlas manage" or "用 Skill Atlas 编排这个任务". Preserve the five command meanings across platforms.
 
 The bundled `commands/skill-atlas.md` is a portable slash-command adapter for
 platforms that load Markdown command files. Use the installer below to register
@@ -90,7 +99,36 @@ python3 <skill-root>/scripts/skill_atlas.py discover competitors ux-audit
 python3 <skill-root>/scripts/skill_atlas.py recommend product "Design an automotive HMI"
 python3 <skill-root>/scripts/skill_atlas.py recommend model "Product animation"
 python3 <skill-root>/scripts/skill_atlas.py orchestrate validate "Create product animation"
+python3 <skill-root>/scripts/skill_atlas.py monitor add closeout --interval monthly
+python3 <skill-root>/scripts/skill_atlas.py monitor due
 ```
+
+## Recurring Competitor Monitoring
+
+Use `monitor add` when a user wants Skill Atlas to revisit competitors on a schedule. The monitor stores configuration and snapshots under `~/.local/share/skill-atlas` by default; `--state-dir` may override this for automation or testing.
+
+`monitor run ID` creates the current competitor discovery packet and records `research-required`. It remains due and does not advance the schedule. This is not a completed web comparison. The active Agent must perform current web research, verify inspectable sources, review license and maintenance, confirm platform compatibility, and run strict security review before producing a results JSON.
+
+Record reviewed results with:
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py monitor run closeout --results results.json
+```
+
+Results use this minimal contract:
+
+```json
+{
+  "summary": "Material changes since the last comparison",
+  "candidates": [
+    {"name": "Candidate", "url": "https://github.com/example/candidate"}
+  ]
+}
+```
+
+The completed snapshot records added, removed, and unchanged candidate identities compared with the prior snapshot. User-authored skills remain protected reference targets and are never automatically replaced.
+
+Skill Atlas deliberately has no resident background process. Codex Automation, OpenCode automation, `cron`, or `launchd` should periodically invoke `monitor due`, then ask an Agent to complete due research packets. Do not describe a generated packet as a completed comparison.
 
 ## Default Workflow
 
