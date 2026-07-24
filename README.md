@@ -53,7 +53,7 @@ Codex does not use the bundled Markdown slash-command adapter. In Codex, invoke 
 
 ## What It Does
 
-Skill Atlas exposes four main workflows:
+Skill Atlas exposes five main workflows:
 
 | Workflow | Purpose | Example |
 | --- | --- | --- |
@@ -61,6 +61,7 @@ Skill Atlas exposes four main workflows:
 | `discover` | Find similar skills, alternatives, capability gaps, or competitors for user-authored skills | `discover competitors ux-audit` |
 | `recommend` | Recommend skills, models, tools, plugins, MCP servers, and software integrations for a task | `recommend tool "Rhino and Blender automation"` |
 | `orchestrate` | Build and validate an ordered multi-skill workflow | `orchestrate validate "Design an automotive HMI"` |
+| `monitor` | Schedule recurring competitor research and compare completed snapshots | `monitor add closeout --interval monthly` |
 
 Examples using the deterministic CLI:
 
@@ -71,6 +72,8 @@ python3 scripts/skill_atlas.py discover competitors ux-audit
 python3 scripts/skill_atlas.py recommend product "Build a product animation platform"
 python3 scripts/skill_atlas.py recommend tool "Rhino, Grasshopper, Blender, and SketchUp"
 python3 scripts/skill_atlas.py orchestrate validate "Design an automotive HMI"
+python3 scripts/skill_atlas.py monitor add closeout --interval monthly
+python3 scripts/skill_atlas.py monitor due
 ```
 
 With `/skill-atlas` or `$skill-atlas`, the rest of the line is the request. Natural-language requests are also supported:
@@ -80,6 +83,41 @@ With `/skill-atlas` or `$skill-atlas`, the rest of the line is the request. Natu
 $skill-atlas find Rhino and Blender skills, connectors, and missing capabilities
 Use Skill Atlas to compare my UX skill with public competitors without replacing mine.
 ```
+
+## Recurring Competitor Comparisons
+
+Create a monitor once:
+
+```bash
+python3 scripts/skill_atlas.py monitor add closeout --interval monthly
+```
+
+Check what is due and generate the next research packet:
+
+```bash
+python3 scripts/skill_atlas.py monitor due
+python3 scripts/skill_atlas.py monitor run closeout
+```
+
+`monitor run` without `--results` records a `research-required` snapshot and remains due. It does not claim that web research happened or advance the schedule. An Agent or approved automation should execute the packet's searches, source checks, license review, maintenance review, compatibility checks, and strict security review, then save:
+
+```json
+{
+  "summary": "What changed and why it matters",
+  "candidates": [
+    {"name": "Candidate", "url": "https://github.com/example/candidate"}
+  ]
+}
+```
+
+Record the completed comparison and calculate additions/removals against the previous completed snapshot:
+
+```bash
+python3 scripts/skill_atlas.py monitor run closeout --results results.json
+python3 scripts/skill_atlas.py monitor history closeout
+```
+
+Schedules and snapshots default to `~/.local/share/skill-atlas`. Skill Atlas does not keep a hidden background process. Use Codex Automation, OpenCode automation, `cron`, or `launchd` to invoke `monitor due` and the Agent-assisted comparison workflow periodically.
 
 ## Safety Model
 
@@ -96,7 +134,7 @@ A clean static scan is a gate, not proof that third-party code is safe. Review s
 
 ## Updating Skill Atlas
 
-Skill Atlas does not silently update itself. Version `0.2.0-beta` supports reviewed local release directories and checksum-verified archives.
+Skill Atlas does not silently update itself. Version `0.3.0-beta` supports reviewed local release directories and checksum-verified archives.
 
 Inspect the current installation:
 
@@ -143,4 +181,4 @@ See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, dis
 
 ## Status
 
-Skill Atlas is currently `0.2.0-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.3.0-beta`. Interfaces and platform adapters may change before the stable release.
