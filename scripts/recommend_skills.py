@@ -124,6 +124,18 @@ CAPABILITIES = {
 
 DEFAULT_CAPABILITIES = ["product-planning"]
 
+RESEARCH_MODES = ("quick", "balanced", "benchmark")
+
+COMPARISON_RUBRIC = [
+    {"criterion": "task-fit", "weight": 30, "evidence": "Trigger precision and direct coverage of the requested capability."},
+    {"criterion": "workflow-quality", "weight": 20, "evidence": "Procedural depth, examples, scripts, references, and output quality."},
+    {"criterion": "evals", "weight": 15, "evidence": "Executable tests, eval cases, regression coverage, and reproducible evidence."},
+    {"criterion": "maintenance", "weight": 10, "evidence": "Recent releases, issue activity, compatibility notes, and maintained dependencies."},
+    {"criterion": "source-license", "weight": 10, "evidence": "Inspectable source, attributable author, repository history, and usable license."},
+    {"criterion": "compatibility", "weight": 10, "evidence": "Codex, OpenCode, Claude Code, dependency, and platform fit."},
+    {"criterion": "safety", "weight": 5, "evidence": "Static review, permissions, install behavior, and absence of hidden destructive actions."},
+]
+
 QUERY_TRANSLATIONS = {
     "人工智能": "ai",
     "大模型": "llm",
@@ -331,6 +343,56 @@ def search_queries(capability: str, product_terms: list[str]) -> list[str]:
     ]
 
 
+def comparison_queries(
+    capability: str, product_terms: list[str], mode: str
+) -> list[str]:
+    queries = search_queries(capability, product_terms)
+    if mode == "benchmark":
+        definition = CAPABILITIES[capability]
+        context = " ".join(product_terms[:4])
+        subject = f"{context} {definition['label']}".strip()
+        queries.extend(
+            [
+                f'{subject} site:skills.sh "SKILL.md"',
+                f'{subject} awesome agent skills GitHub',
+                f'{subject} agent skill eval benchmark',
+                f'{subject} agent skill security license maintenance',
+            ]
+        )
+    return queries
+
+
+def build_comparison_plan(
+    mode: str,
+    capabilities: list[str],
+    product_terms: list[str],
+    ready: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if mode == "quick":
+        return []
+    local_by_capability: dict[str, list[str]] = defaultdict(list)
+    for item in ready:
+        local_by_capability[item["capability"]].append(item["skill"])
+    return [
+        {
+            "capability": capability,
+            "capability_label": CAPABILITIES[capability]["label"],
+            "local_candidates": local_by_capability.get(capability, []),
+            "queries": comparison_queries(capability, product_terms, mode),
+            "candidate_target": 8 if mode == "benchmark" else 3,
+            "required_checks": [
+                "source and author",
+                "license",
+                "maintenance activity",
+                "platform compatibility",
+                "eval and test evidence",
+                "strict security review",
+            ],
+        }
+        for capability in capabilities
+    ]
+
+
 PHASE_CAPABILITIES = {
     "research": ["model-selection", "product-planning"],
     "design": ["hmi-design", "architecture-interior", "design-ux"],
@@ -381,7 +443,14 @@ def build_orchestration(use_now: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return phases
 
 
-def build_recommendation(product: str, records: list[dict[str, Any]], limit: int) -> dict[str, Any]:
+def build_recommendation(
+    product: str,
+    records: list[dict[str, Any]],
+    limit: int,
+    research_mode: str = "balanced",
+) -> dict[str, Any]:
+    if research_mode not in RESEARCH_MODES:
+        raise ValueError(f"Unsupported research mode: {research_mode}")
     capabilities = detect_capabilities(product)
     terms = product_tokens(product)
     local = unique_records(records)
@@ -428,8 +497,12 @@ def build_recommendation(product: str, records: list[dict[str, Any]], limit: int
             )
 
     orchestration = build_orchestration(ready)
+    comparison_plan = build_comparison_plan(research_mode, capabilities, terms, ready)
+    external_required = bool(gaps or comparison_plan)
     return {
         "product": product,
+        "research_mode": research_mode,
+        "recommendation_status": "provisional" if external_required else "local-complete",
         "detected_capabilities": [
             {"id": key, "label": CAPABILITIES[key]["label"]} for key in capabilities
         ],
@@ -437,6 +510,8 @@ def build_recommendation(product: str, records: list[dict[str, Any]], limit: int
         "orchestration": orchestration,
         "platform_managed_matches": managed,
         "external_search_gaps": gaps,
+        "external_comparison_plan": comparison_plan,
+        "comparison_rubric": COMPARISON_RUBRIC,
         "external_research_targets": research_targets(product, capabilities),
         "policy": {
             "automatic_install": False,
@@ -455,8 +530,28 @@ def emit_markdown(result: dict[str, Any], include_orchestration: bool) -> None:
     print("# Product Skill Recommendation")
     print()
     print(f"- Request: {result['product']}")
-    print("- Mode: local-first recommendation with external gap discovery")
+    print(f"- Research mode: {result['research_mode']}")
+    print(f"- Recommendation status: {result['recommendation_status']}")
     print()
+
+    if result["external_comparison_plan"]:
+        print("## External Benchmark Plan")
+        print()
+        print("Local matches are provisional until these external candidates are researched and scored with the same rubric.")
+        print()
+        for item in result["external_comparison_plan"]:
+            local = ", ".join(item["local_candidates"]) or "none"
+            print(f"- {item['capability_label']} (local: {local}; target: {item['candidate_target']} external candidates)")
+            for query in item["queries"]:
+                print(f"  - `{query}`")
+        print()
+
+        print("## Comparison Rubric")
+        print()
+        for criterion in result["comparison_rubric"]:
+            print(f"- {criterion['criterion']}: {criterion['weight']} points")
+            print(f"  - evidence: {criterion['evidence']}")
+        print()
     print("## Required Capabilities")
     print()
     for capability in result["detected_capabilities"]:
@@ -528,6 +623,7 @@ def parse_args() -> argparse.Namespace:
     request_group.add_argument("--product", help="Compatibility alias for --request.")
     parser.add_argument("--root", action="append", default=[], help="Skill root to scan. May be repeated.")
     parser.add_argument("--mode", choices=["recommend", "orchestrate"], default="orchestrate")
+    parser.add_argument("--research-mode", choices=RESEARCH_MODES, default="balanced")
     parser.add_argument("--limit-per-capability", type=int, default=2)
     parser.add_argument("--format", choices=["markdown", "json"], default="markdown")
     return parser.parse_args()
@@ -540,6 +636,7 @@ def main() -> None:
         request,
         run_audit(args.root),
         max(1, args.limit_per_capability),
+        args.research_mode,
     )
     if args.mode == "recommend":
         result = {key: value for key, value in result.items() if key != "orchestration"}

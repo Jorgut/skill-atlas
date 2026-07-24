@@ -308,7 +308,12 @@ def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
         request = f"Compare and select current AI models for: {request}"
     elif args.action == "tool":
         request = f"Find software integrations, APIs, plugins, MCP connectors, and skills for: {request}"
-    result = recommend_skills.build_recommendation(request, discovery_records(args), args.limit)
+    result = recommend_skills.build_recommendation(
+        request,
+        discovery_records(args),
+        args.limit,
+        getattr(args, "mode", "balanced"),
+    )
     if args.action == "model" and not any(
         item["type"] == "model" for item in result["external_research_targets"]
     ):
@@ -365,9 +370,12 @@ def validate_orchestration(result: dict[str, Any]) -> dict[str, Any]:
         issues.append("One or more required capabilities still need external discovery.")
     return {
         "valid": not issues,
+        "recommendation_status": result["recommendation_status"],
+        "external_comparison_pending": bool(result["external_comparison_plan"]),
         "issues": issues,
         "phases": phases,
         "external_gaps": result["external_search_gaps"],
+        "external_comparison_plan": result["external_comparison_plan"],
     }
 
 
@@ -375,6 +383,8 @@ def emit_validation_markdown(validation: dict[str, Any]) -> None:
     print("# Skill Atlas Orchestration Validation")
     print()
     print(f"- valid: {str(validation['valid']).lower()}")
+    print(f"- recommendation status: {validation['recommendation_status']}")
+    print(f"- external comparison pending: {str(validation['external_comparison_pending']).lower()}")
     print(f"- phases: {len(validation['phases'])}")
     print(f"- external gaps: {len(validation['external_gaps'])}")
     print()
@@ -508,6 +518,12 @@ def add_recommend_commands(subparsers: argparse._SubParsersAction) -> None:
         add_roots(action)
         add_output(action, ["markdown", "json"])
         action.add_argument("--limit", type=int, default=2)
+        action.add_argument(
+            "--mode",
+            choices=recommend_skills.RESEARCH_MODES,
+            default="balanced",
+            help="External research depth; balanced compares local and public candidates by default.",
+        )
         action.set_defaults(handler=handle_recommend)
 
 
@@ -524,6 +540,12 @@ def add_orchestrate_commands(subparsers: argparse._SubParsersAction) -> None:
         add_roots(action)
         add_output(action, ["markdown", "json"])
         action.add_argument("--limit", type=int, default=2)
+        action.add_argument(
+            "--mode",
+            choices=recommend_skills.RESEARCH_MODES,
+            default="balanced",
+            help="External research depth; balanced compares local and public candidates by default.",
+        )
         action.set_defaults(handler=handle_orchestrate)
 
 
