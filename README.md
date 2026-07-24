@@ -1,5 +1,10 @@
 # Skill Atlas
 
+[![skills.sh](https://img.shields.io/badge/skills.sh-Jorgut/skill--atlas-8A2BE2?style=flat-square)](https://skills.sh/Jorgut/skill-atlas)
+[![Install with npx](https://img.shields.io/badge/npx%20skills%20add-Jorgut%2Fskill--atlas-000?style=flat-square)](https://github.com/Jorgut/skill-atlas)
+![License](https://img.shields.io/github/license/Jorgut/skill-atlas?style=flat-square)
+![Agent Skill](https://img.shields.io/badge/Agent%20Skill-Skill%20Manager-111111?style=flat-square)
+
 Skill Atlas is a local-aware, cross-platform manager for agent skills. It inventories installed skills, detects duplicates and symlinks, plans updates and consolidation, discovers alternatives and competitors, recommends skill stacks for products and professional workflows, and validates multi-skill orchestration.
 
 It supports Codex, OpenCode, Claude Code, shared `~/.agents/skills` installations, plugin caches, and custom skill roots. Read-only planning is the default.
@@ -10,6 +15,14 @@ Beginner guides: [中文](docs/GETTING_STARTED.zh-CN.md) | [English](docs/GETTIN
 > Copying the Skill Atlas folder into a skill directory only installs the skill. It does **not** register `/skill-atlas`. Use the installer with `--commands` to register command adapters on platforms that support Markdown slash commands.
 
 ## Install
+
+### Quick install (recommended)
+
+```bash
+npx skills add Jorgut/skill-atlas
+```
+
+### Manual install
 
 Requirements: Git and Python 3.10 or newer.
 
