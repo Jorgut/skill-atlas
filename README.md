@@ -4,7 +4,7 @@ Skill Atlas is a local-first, cross-platform manager for agent skills. It invent
 
 It supports Codex, OpenCode, Claude Code, shared `~/.agents/skills` installations, plugin caches, and custom skill roots. Read-only planning is the default.
 
-New user? Start with the step-by-step Chinese guide: [`docs/GETTING_STARTED.zh-CN.md`](docs/GETTING_STARTED.zh-CN.md).
+Beginner guides: [中文](docs/GETTING_STARTED.zh-CN.md) | [English](docs/GETTING_STARTED.en.md) | [Русский](docs/GETTING_STARTED.ru.md)
 
 > [!IMPORTANT]
 > Copying the Skill Atlas folder into a skill directory only installs the skill. It does **not** register `/skill-atlas`. Use the installer with `--commands` to register command adapters on platforms that support Markdown slash commands.

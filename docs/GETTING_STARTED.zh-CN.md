@@ -1,5 +1,7 @@
 # Skill Atlas 新手使用教程
 
+**中文** | [English](GETTING_STARTED.en.md) | [Русский](GETTING_STARTED.ru.md)
+
 这份教程面向第一次使用 Agent Skill、不会配置软链接、也不熟悉命令行的用户。按顺序操作即可。
 
 ## 1. 先理解它能做什么
@@ -231,4 +233,3 @@ python3 ~/.agents/skills/skill-atlas/scripts/skill_atlas.py manage self status
 ```
 
 当前 beta 版本不会偷偷联网自更新。应先获取并审查新版，再使用 `manage self update` 预览和应用。
-
