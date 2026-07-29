@@ -1,5 +1,5 @@
 ---
-description: Manage, discover, recommend, orchestrate, or monitor agent skills
+description: Manage, discover, recommend, orchestrate, refresh markets, or monitor agent skills
 ---
 
 Use the `skill-atlas` skill for this request.
