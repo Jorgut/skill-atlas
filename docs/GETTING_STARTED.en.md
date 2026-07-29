@@ -13,6 +13,7 @@ This guide is for people who are new to Agent Skills, symbolic links, or command
 | Find competitors for your own skill | `discover competitors` |
 | Choose skills for a product or task | `recommend product` or `recommend task` |
 | Combine skills into a workflow | `orchestrate plan` or `orchestrate validate` |
+| Check public-market freshness | `market status` or `market refresh` |
 | Repeat competitor research periodically | `monitor` |
 
 Skill Atlas is read-only by default. It does not silently install, delete, update, or replace skills.
@@ -116,6 +117,24 @@ Local and public candidates use the same 100-point rubric: task fit 30, workflow
 
 The CLI creates an external research worklist; it does not browse the web itself. A `provisional` result still requires the active Agent to execute the searches, inspect source code, complete security review, and score the candidates.
 
+### Does Every Startup Search the Whole Market?
+
+No. Agent platforms do not share one startup-hook system, and a full search on every launch would be slow. Every `recommend` or `orchestrate` invocation checks the local reviewed snapshot instead: `quick` defaults to seven days, `balanced` to 24 hours, and `benchmark` always requires current research.
+
+The lightweight status check is offline:
+
+```text
+$skill-atlas market status
+```
+
+When it reports `missing` or `stale`, create a research packet:
+
+```text
+$skill-atlas market refresh --category ui-ux
+```
+
+This remains `research-required`. The Agent must actually research and review at least one marketplace, one official or GitHub source, and one community source, then save results with `market refresh --results results.json`. Add `--refresh` to a recommendation when the cache must be ignored.
+
 Validate the proposed combination:
 
 ```text
@@ -179,6 +198,7 @@ Use Skill Atlas to check monitor due. Complete web research, security review, an
 
 - `read-only`: no files were changed
 - `research-required`: a research packet exists, but external comparison is incomplete
+- `missing` / `fresh` / `stale`: the market snapshot is absent, inside its TTL, or expired
 - `completed`: reviewed results were saved as a snapshot
 - `user-authored`: your skill; never automatically replaced
 - `external-maintained`: maintained by an external author and eligible for reviewed updates

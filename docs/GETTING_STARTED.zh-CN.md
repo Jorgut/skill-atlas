@@ -6,7 +6,7 @@
 
 ## 1. 先理解它能做什么
 
-Skill Atlas 有五组能力：
+Skill Atlas 有六组能力：
 
 | 你想做什么 | 使用命令 |
 | --- | --- |
@@ -15,6 +15,7 @@ Skill Atlas 有五组能力：
 | 为自己的 Skill 找竞品 | `discover competitors` |
 | 不知道做产品需要哪些 Skill | `recommend product` 或 `recommend task` |
 | 组合多个 Skill 完成复杂工作 | `orchestrate plan` 或 `orchestrate validate` |
+| 检查公开技能市场是否过期 | `market status` 或 `market refresh` |
 | 定期重新检查竞品变化 | `monitor` |
 
 默认情况下它只检查和生成计划，不会偷偷安装、删除或替换 Skill。
@@ -133,6 +134,24 @@ $skill-atlas recommend product 我想制作一款汽车 HMI 设计工具 --mode 
 
 命令行程序只会生成站外研究清单，不会自己联网完成搜索。结果显示 `provisional` 时，应让当前 Agent 真正执行搜索、检查源码和安全性，再给出最终比较。
 
+### 每次启动是否会全市场搜索
+
+不会。不同 Agent 平台没有统一启动钩子，而且每次启动全量搜索会很慢。Skill Atlas 在每次 `recommend` 或 `orchestrate` 调用时检查本地市场快照：`quick` 默认 7 天、`balanced` 默认 24 小时、`benchmark` 每次都要求最新研究。
+
+轻量检查不会联网：
+
+```text
+$skill-atlas market status
+```
+
+状态为 `missing` 或 `stale` 时，生成研究包：
+
+```text
+$skill-atlas market refresh --category ui-ux
+```
+
+这时仍是 `research-required`。Agent 必须实际搜索并审查至少一个公开市场、一个官方或 GitHub 来源、一个社区精选来源，再使用 `market refresh --results results.json` 保存结果。需要无视缓存时，在推荐命令后加 `--refresh`。
+
 再检查组合是否合理：
 
 ```text
@@ -204,6 +223,7 @@ Skill Atlas 本身不会偷偷常驻后台。要实现无人值守，需要让 C
 
 - `read-only`：只检查或生成计划，没有修改文件
 - `research-required`：研究包已生成，但联网对比尚未完成
+- `missing` / `fresh` / `stale`：市场快照不存在、仍在 TTL 内或已经过期
 - `completed`：经过审查的结果已录入快照
 - `user-authored`：用户自研 Skill，只作为竞品比较对象，不替换
 - `external-maintained`：第三方维护，可检查上游更新，但更新前必须审查
