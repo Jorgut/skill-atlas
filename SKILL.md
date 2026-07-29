@@ -16,6 +16,7 @@ Choose the workflow from the request:
 - inventory, duplicates, updates, symlinks, or consolidation: run the audit workflow
 - a product idea, professional task, model question, or software workflow with uncertainty about which capabilities to use: run recommendation and orchestration
 - stronger alternatives or competitors for installed skills: run external discovery
+- public-market freshness or a reviewed shared market snapshot: run market
 - recurring competitor comparison with historical differences: run monitor
 - a downloaded or proposed third-party skill: run strict security review
 
@@ -50,6 +51,9 @@ skill-atlas
     ├── plan       build an ordered multi-skill workflow
     ├── validate   check role overlap, duplication, and capability gaps
     └── run        stage an execution plan and wait for explicit confirmation
+├── market
+│   ├── status     inspect shared public-market snapshot freshness
+│   └── refresh    create a research packet or save reviewed market results
 └── monitor
     ├── add        create a daily, weekly, monthly, or quarterly monitor
     ├── list       list monitor configurations
@@ -62,7 +66,7 @@ skill-atlas
 
 Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
 
-Agent command syntax varies. If a platform does not pass arguments after `$skill-atlas` or does not support dollar-prefixed skill calls, accept equivalent natural language such as "Use Skill Atlas manage" or "用 Skill Atlas 编排这个任务". Preserve the five command meanings across platforms.
+Agent command syntax varies. If a platform does not pass arguments after `$skill-atlas` or does not support dollar-prefixed skill calls, accept equivalent natural language such as "Use Skill Atlas manage" or "用 Skill Atlas 编排这个任务". Preserve the six command meanings across platforms.
 
 The bundled `commands/skill-atlas.md` is a portable slash-command adapter for
 platforms that load Markdown command files. Use the installer below to register
@@ -99,6 +103,8 @@ python3 <skill-root>/scripts/skill_atlas.py discover competitors ux-audit
 python3 <skill-root>/scripts/skill_atlas.py recommend product "Design an automotive HMI" --mode balanced
 python3 <skill-root>/scripts/skill_atlas.py recommend model "Product animation" --mode benchmark
 python3 <skill-root>/scripts/skill_atlas.py orchestrate validate "Create product animation" --mode balanced
+python3 <skill-root>/scripts/skill_atlas.py market status
+python3 <skill-root>/scripts/skill_atlas.py market refresh --category ui-ux
 python3 <skill-root>/scripts/skill_atlas.py monitor add closeout --interval monthly
 python3 <skill-root>/scripts/skill_atlas.py monitor due
 ```
@@ -200,6 +206,8 @@ Add one or more `--root /path/to/skills` options when the user's platform stores
 
 The deterministic CLI does not browse the internet. In `balanced` and `benchmark`, treat `external_comparison_plan` as work for the active Agent: search current public sources, inspect the candidate code, and score local and external candidates with the same 100-point rubric. Keep the recommendation status `provisional` until that work is complete.
 
+Every unified `recommend` or `orchestrate` invocation checks the reviewed public-market snapshot under `~/.local/share/skill-atlas`. Default freshness windows are 168 hours for `quick`, 24 hours for `balanced`, and zero for `benchmark`. `benchmark` and `--refresh` always set `market_refresh_required`. Skill Atlas cannot assume every Agent platform supports startup hooks; a platform startup task may run `market status`, but it must not perform a full market crawl automatically.
+
 2. Return these sections when applicable:
 
 - `Required Capabilities`: inferred work areas such as product planning, UI/UX, backend, storage, authentication, AI, testing, documents, deployment, or payments
@@ -223,6 +231,14 @@ The deterministic CLI does not browse the internet. In `balanced` and `benchmark
 5. For external gaps, use the local `search-skill` workflow when available, or search inspectable official and community sources directly. Treat the generated queries as a worklist, not as verified recommendations.
 
 6. Before presenting an external skill as installable, verify its source, author or repository history, license, maintenance activity, platform compatibility, and strict security scan. Never install automatically.
+
+## Public Market Freshness
+
+Use `market status` as the lightweight startup check. It reads local metadata only and returns `missing`, `fresh`, or `stale` with `researched_at`, age, TTL, source coverage, and candidate count.
+
+Use `market refresh` to create a research packet. A completed market snapshot must include at least one `marketplace`, one `official-or-github`, and one `community` source. The command does not browse by itself. After the Agent finishes current research and security review, save reviewed JSON with `market refresh --results FILE`.
+
+Do not claim a cache is refreshed merely because a packet was generated. Only validated results produce a `completed` snapshot.
 
 Example:
 

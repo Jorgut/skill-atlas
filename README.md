@@ -68,7 +68,7 @@ Codex does not use the bundled Markdown slash-command adapter. In Codex, invoke 
 
 ## What It Does
 
-Skill Atlas exposes five main workflows:
+Skill Atlas exposes six main workflows:
 
 | Workflow | Purpose | Example |
 | --- | --- | --- |
@@ -76,6 +76,7 @@ Skill Atlas exposes five main workflows:
 | `discover` | Find similar skills, alternatives, capability gaps, or competitors for user-authored skills | `discover competitors ux-audit` |
 | `recommend` | Recommend skills, models, tools, plugins, MCP servers, and software integrations for a task | `recommend tool "Rhino and Blender automation"` |
 | `orchestrate` | Build and validate an ordered multi-skill workflow | `orchestrate validate "Design an automotive HMI"` |
+| `market` | Check public-market freshness or record a reviewed shared snapshot | `market status` |
 | `monitor` | Schedule recurring competitor research and compare completed snapshots | `monitor add closeout --interval monthly` |
 
 Examples using the deterministic CLI:
@@ -87,6 +88,8 @@ python3 scripts/skill_atlas.py discover competitors ux-audit
 python3 scripts/skill_atlas.py recommend product "Build a product animation platform" --mode balanced
 python3 scripts/skill_atlas.py recommend tool "Rhino, Grasshopper, Blender, and SketchUp" --mode benchmark
 python3 scripts/skill_atlas.py orchestrate validate "Design an automotive HMI" --mode balanced
+python3 scripts/skill_atlas.py market status
+python3 scripts/skill_atlas.py market refresh --category ui-ux
 python3 scripts/skill_atlas.py monitor add closeout --interval monthly
 python3 scripts/skill_atlas.py monitor due
 ```
@@ -112,6 +115,40 @@ Use Skill Atlas to compare my UX skill with public competitors without replacing
 Local and public candidates use one 100-point rubric: task fit 30, workflow quality 20, eval evidence 15, maintenance 10, source and license 10, compatibility 10, and safety 5.
 
 The deterministic CLI creates an external research worklist; it does not browse the web by itself. A `provisional` result means the Agent must execute those searches, inspect sources, and score the candidates before claiming the comparison is complete.
+
+Every `recommend` and `orchestrate` invocation checks the reviewed market snapshot. Default TTLs are seven days for `quick`, 24 hours for `balanced`, and zero for `benchmark`. `benchmark` and `--refresh` always require current research.
+
+## Public Market Cache
+
+Use this as a lightweight startup check; it never accesses the network:
+
+```bash
+python3 scripts/skill_atlas.py market status
+```
+
+When the snapshot is missing or stale, generate a category-specific research packet:
+
+```bash
+python3 scripts/skill_atlas.py market refresh --category ui-ux
+```
+
+The active Agent must then research and review the candidates. Completed results require at least one marketplace source, one official or GitHub source, and one maintained community source:
+
+```json
+{
+  "summary": "Current reviewed market snapshot",
+  "sources": [
+    {"name": "skills.sh", "type": "marketplace", "url": "https://skills.sh"},
+    {"name": "GitHub", "type": "official-or-github", "url": "https://github.com"},
+    {"name": "Community list", "type": "community", "url": "https://github.com/example/awesome-skills"}
+  ],
+  "candidates": [
+    {"name": "Candidate", "url": "https://github.com/example/candidate", "capabilities": ["design-ux"]}
+  ]
+}
+```
+
+Save reviewed results with `market refresh --results results.json`. Generating a packet alone remains `research-required` and never updates the freshness timestamp. Skill Atlas does not install a universal startup hook because Agent platforms differ; platform automation may run `market status`, while full research stays TTL-driven or explicit.
 
 ## Recurring Competitor Comparisons
 
@@ -163,7 +200,7 @@ A clean static scan is a gate, not proof that third-party code is safe. Review s
 
 ## Updating Skill Atlas
 
-Skill Atlas does not silently update itself. Version `0.4.0-beta` supports reviewed local release directories and checksum-verified archives.
+Skill Atlas does not silently update itself. Version `0.5.0-beta` supports reviewed local release directories and checksum-verified archives.
 
 Inspect the current installation:
 
@@ -210,4 +247,4 @@ See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, dis
 
 ## Status
 
-Skill Atlas is currently `0.4.0-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.5.0-beta`. Interfaces and platform adapters may change before the stable release.
