@@ -15,6 +15,7 @@ import audit_skills
 import competitor_monitor
 import discovery_brief
 import install_skill_atlas
+import market_cache
 import recommend_skills
 import self_update
 
@@ -24,6 +25,7 @@ DISCOVER_ACTIONS = {"similar", "competitors", "alternatives", "gaps"}
 RECOMMEND_ACTIONS = {"product", "task", "model", "tool"}
 ORCHESTRATE_ACTIONS = {"plan", "validate", "run"}
 MONITOR_ACTIONS = {"add", "list", "status", "due", "run", "history", "remove"}
+MARKET_ACTIONS = {"status", "refresh"}
 
 
 def add_output(parser: argparse.ArgumentParser, choices: list[str]) -> None:
@@ -44,6 +46,10 @@ def records_for(args: argparse.Namespace, check_upstream: bool = False) -> list[
 
 def json_print(value: Any) -> None:
     print(json.dumps(value, ensure_ascii=False, indent=2))
+
+
+def default_state_dir() -> str:
+    return str(Path.home() / ".local/share/skill-atlas")
 
 
 def manage_plan(records: list[audit_skills.SkillRecord], action: str) -> dict[str, Any]:
@@ -302,6 +308,69 @@ def handle_monitor(args: argparse.Namespace) -> None:
     json_print(payload) if args.format == "json" else emit_monitor_markdown(payload)
 
 
+def market_research_packet(categories: list[str]) -> dict[str, Any]:
+    subjects = categories or ["all skill categories"]
+    return {
+        "status": "research-required",
+        "categories": subjects,
+        "required_source_types": list(market_cache.REQUIRED_SOURCE_TYPES),
+        "source_examples": {
+            "marketplace": ["skills.sh", "SkillsMP", "SkillMD", "Playbooks", "ClawHub"],
+            "official-or-github": ["official author repository", "GitHub repository with SKILL.md"],
+            "community": ["awesome agent skills list", "maintained community directory"],
+        },
+        "queries": [
+            f'{subject} agent skill marketplace GitHub "SKILL.md"'
+            for subject in subjects
+        ],
+        "next_step": "Let an Agent perform current web research and strict review, then rerun market refresh with --results.",
+    }
+
+
+def emit_market_markdown(payload: dict[str, Any]) -> None:
+    print(f"# Skill Atlas Market {payload['action'].title()}")
+    print()
+    print(f"- status: {payload['status']}")
+    if payload.get("freshness"):
+        freshness = payload["freshness"]
+        print(f"- fresh: {str(freshness['fresh']).lower()}")
+        print(f"- researched at: {freshness['researched_at'] or 'never'}")
+        print(f"- age hours: {freshness['age_hours'] if freshness['age_hours'] is not None else 'unknown'}")
+        print(f"- ttl hours: {freshness['ttl_hours']}")
+        print(f"- candidates: {freshness['candidate_count']}")
+    if payload.get("research_packet"):
+        packet = payload["research_packet"]
+        print(f"- required sources: {', '.join(packet['required_source_types'])}")
+        for query in packet["queries"]:
+            print(f"- query: `{query}`")
+        print()
+        print(packet["next_step"])
+
+
+def handle_market(args: argparse.Namespace) -> None:
+    cache = market_cache.MarketCache(Path(args.state_dir))
+    try:
+        if args.action == "status":
+            freshness = cache.status(args.ttl_hours)
+            payload = {"action": "status", "status": freshness["status"], "freshness": freshness}
+        elif args.results:
+            results = json.loads(Path(args.results).read_text(encoding="utf-8"))
+            cache.save(results)
+            freshness = cache.status(args.ttl_hours)
+            payload = {"action": "refresh", "status": "completed", "freshness": freshness}
+        else:
+            payload = {
+                "action": "refresh",
+                "status": "research-required",
+                "freshness": cache.status(args.ttl_hours),
+                "research_packet": market_research_packet(args.category),
+            }
+    except (OSError, json.JSONDecodeError, market_cache.MarketCacheError) as exc:
+        print(f"Market refresh refused: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    json_print(payload) if args.format == "json" else emit_market_markdown(payload)
+
+
 def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
     request = args.request
     if args.action == "model":
@@ -314,6 +383,38 @@ def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
         args.limit,
         getattr(args, "mode", "balanced"),
     )
+    research_mode = result["research_mode"]
+    ttl_hours = args.market_ttl_hours
+    if ttl_hours is None:
+        ttl_hours = market_cache.MODE_TTL_HOURS[research_mode]
+    cache = market_cache.MarketCache(Path(args.market_state_dir))
+    try:
+        freshness = cache.status(ttl_hours)
+    except (OSError, json.JSONDecodeError, market_cache.MarketCacheError) as exc:
+        freshness = {
+            "status": "invalid",
+            "fresh": False,
+            "ttl_hours": ttl_hours,
+            "age_hours": None,
+            "researched_at": None,
+            "snapshot": None,
+            "source_types": [],
+            "candidate_count": 0,
+            "error": str(exc),
+        }
+    result["market_freshness"] = freshness
+    result["market_refresh_required"] = market_cache.refresh_required(
+        research_mode,
+        freshness,
+        args.refresh,
+        bool(result["external_search_gaps"]),
+    )
+    result["market_policy"] = {
+        "force_refresh": args.refresh,
+        "required_source_types": list(market_cache.REQUIRED_SOURCE_TYPES),
+        "refresh_command": "skill-atlas market refresh",
+        "completion_requires_reviewed_results": True,
+    }
     if args.action == "model" and not any(
         item["type"] == "model" for item in result["external_research_targets"]
     ):
@@ -425,10 +526,11 @@ def normalize_legacy_args(argv: list[str]) -> list[str]:
         "recommend": RECOMMEND_ACTIONS,
         "orchestrate": ORCHESTRATE_ACTIONS,
         "monitor": MONITOR_ACTIONS,
+        "market": MARKET_ACTIONS,
     }.get(command)
     if not actions or len(argv) > 1 and argv[1] in actions | {"-h", "--help"}:
         return argv
-    defaults = {"manage": "scan", "discover": "similar", "recommend": "task", "orchestrate": "plan", "monitor": "list"}
+    defaults = {"manage": "scan", "discover": "similar", "recommend": "task", "orchestrate": "plan", "monitor": "list", "market": "status"}
     return [command, defaults[command], *argv[1:]]
 
 
@@ -524,6 +626,9 @@ def add_recommend_commands(subparsers: argparse._SubParsersAction) -> None:
             default="balanced",
             help="External research depth; balanced compares local and public candidates by default.",
         )
+        action.add_argument("--refresh", action="store_true", help="Require current market research instead of accepting a fresh cache.")
+        action.add_argument("--market-ttl-hours", type=int, help="Override the mode's market-cache TTL.")
+        action.add_argument("--market-state-dir", default=default_state_dir())
         action.set_defaults(handler=handle_recommend)
 
 
@@ -546,13 +651,16 @@ def add_orchestrate_commands(subparsers: argparse._SubParsersAction) -> None:
             default="balanced",
             help="External research depth; balanced compares local and public candidates by default.",
         )
+        action.add_argument("--refresh", action="store_true", help="Require current market research instead of accepting a fresh cache.")
+        action.add_argument("--market-ttl-hours", type=int, help="Override the mode's market-cache TTL.")
+        action.add_argument("--market-state-dir", default=default_state_dir())
         action.set_defaults(handler=handle_orchestrate)
 
 
 def add_monitor_commands(subparsers: argparse._SubParsersAction) -> None:
     monitor = subparsers.add_parser("monitor", help="Schedule and track recurring competitor comparisons.")
     actions = monitor.add_subparsers(dest="action", required=True)
-    default_state = str(Path.home() / ".local/share/skill-atlas")
+    default_state = default_state_dir()
 
     add = actions.add_parser("add", help="Create a recurring competitor monitor.")
     add.add_argument("name", help="Stable monitor name.")
@@ -594,8 +702,27 @@ def add_monitor_commands(subparsers: argparse._SubParsersAction) -> None:
     run.set_defaults(handler=handle_monitor)
 
 
+def add_market_commands(subparsers: argparse._SubParsersAction) -> None:
+    market = subparsers.add_parser("market", help="Inspect or refresh the reviewed public skill-market cache.")
+    actions = market.add_subparsers(dest="action", required=True)
+
+    status = actions.add_parser("status", help="Report market snapshot freshness without network access.")
+    status.add_argument("--ttl-hours", type=int, default=168)
+    status.add_argument("--state-dir", default=default_state_dir())
+    add_output(status, ["markdown", "json"])
+    status.set_defaults(handler=handle_market)
+
+    refresh = actions.add_parser("refresh", help="Create a market research packet or save reviewed results.")
+    refresh.add_argument("--category", action="append", default=[])
+    refresh.add_argument("--results", help="Reviewed market-results JSON to validate and save.")
+    refresh.add_argument("--ttl-hours", type=int, default=168)
+    refresh.add_argument("--state-dir", default=default_state_dir())
+    add_output(refresh, ["markdown", "json"])
+    refresh.set_defaults(handler=handle_market)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Manage, discover, recommend, orchestrate, and monitor agent skills.")
+    parser = argparse.ArgumentParser(description="Manage, discover, recommend, orchestrate, refresh markets, and monitor agent skills.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     add_manage_commands(subparsers)
     add_install_command(subparsers)
@@ -603,6 +730,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     add_recommend_commands(subparsers)
     add_orchestrate_commands(subparsers)
     add_monitor_commands(subparsers)
+    add_market_commands(subparsers)
     return parser.parse_args(normalize_legacy_args(list(sys.argv[1:] if argv is None else argv)))
 
 
