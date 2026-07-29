@@ -347,16 +347,20 @@ def comparison_queries(
     capability: str, product_terms: list[str], mode: str
 ) -> list[str]:
     queries = search_queries(capability, product_terms)
+    definition = CAPABILITIES[capability]
+    context = " ".join(product_terms[:4])
+    subject = f"{context} {definition['label']}".strip()
+    queries.extend(
+        [
+            f'{subject} site:skills.sh "SKILL.md"',
+            f'{subject} awesome agent skills GitHub',
+        ]
+    )
     if mode == "benchmark":
-        definition = CAPABILITIES[capability]
-        context = " ".join(product_terms[:4])
-        subject = f"{context} {definition['label']}".strip()
         queries.extend(
             [
-                f'{subject} site:skills.sh "SKILL.md"',
-                f'{subject} awesome agent skills GitHub',
                 f'{subject} agent skill eval benchmark',
-                f'{subject} agent skill security license maintenance',
+                f'{subject} SkillsMP SkillMD Playbooks ClawHub security license maintenance',
             ]
         )
     return queries
@@ -380,6 +384,11 @@ def build_comparison_plan(
             "local_candidates": local_by_capability.get(capability, []),
             "queries": comparison_queries(capability, product_terms, mode),
             "candidate_target": 8 if mode == "benchmark" else 3,
+            "required_source_types": [
+                "marketplace",
+                "official-or-github",
+                "community",
+            ],
             "required_checks": [
                 "source and author",
                 "license",
@@ -533,6 +542,19 @@ def emit_markdown(result: dict[str, Any], include_orchestration: bool) -> None:
     print(f"- Research mode: {result['research_mode']}")
     print(f"- Recommendation status: {result['recommendation_status']}")
     print()
+
+    if result.get("market_freshness"):
+        freshness = result["market_freshness"]
+        print("## Public Market Freshness")
+        print()
+        print(f"- Status: {freshness['status']}")
+        print(f"- Researched at: {freshness['researched_at'] or 'never'}")
+        print(f"- Age hours: {freshness['age_hours'] if freshness['age_hours'] is not None else 'unknown'}")
+        print(f"- TTL hours: {freshness['ttl_hours']}")
+        print(f"- Refresh required: {str(result['market_refresh_required']).lower()}")
+        if result["market_refresh_required"]:
+            print("- Next step: execute the external comparison plan and save reviewed results with `skill-atlas market refresh --results FILE`.")
+        print()
 
     if result["external_comparison_plan"]:
         print("## External Benchmark Plan")

@@ -40,6 +40,11 @@ class RecommendationModeTests(unittest.TestCase):
         )
         self.assertEqual(validation["local_candidates"], ["ux-audit"])
         self.assertEqual(validation["candidate_target"], 3)
+        self.assertEqual(
+            validation["required_source_types"],
+            ["marketplace", "official-or-github", "community"],
+        )
+        self.assertTrue(any("skills.sh" in query for query in validation["queries"]))
 
     def test_quick_only_generates_search_gaps(self) -> None:
         result = recommend_skills.build_recommendation(
