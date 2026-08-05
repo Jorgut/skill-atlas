@@ -112,13 +112,13 @@ CAPABILITIES = {
     },
     "architecture-interior": {
         "label": "Architecture and interior design",
-        "intent": ["architecture", "architect", "interior", "building", "建筑", "建筑师", "室内", "空间设计"],
-        "skill": ["architecture", "architect", "interior", "space", "arch", "boq"],
+        "intent": ["architecture", "architect", "interior", "building", "space planning", "spatial design", "建筑", "建筑师", "室内", "室内设计", "空间设计", "空间规划", "软装"],
+        "skill": ["architecture", "architect", "interior", "space", "arch", "archviz", "boq", "spatial"],
     },
     "cad-3d-modeling": {
         "label": "CAD and 3D modeling automation",
-        "intent": ["3d", "cad", "rhino", "grasshopper", "blender", "sketchup", "modeling", "建模", "犀牛", "草蜢"],
-        "skill": ["3d", "cad", "rhino", "grasshopper", "blender", "sketchup"],
+        "intent": ["3d", "cad", "bim", "rhino", "grasshopper", "blender", "sketchup", "revit", "autocad", "freecad", "modeling", "建模", "犀牛", "草蜢"],
+        "skill": ["3d", "cad", "bim", "rhino", "grasshopper", "blender", "sketchup", "revit", "autocad", "freecad", "modeling"],
     },
 }
 
@@ -200,6 +200,16 @@ STACK_HINTS = {
 SPECIALIZED_SKILL_HINTS = {
     "slack-gif-creator": ["slack", "gif"],
     "hatch-pet": ["pet", "mascot", "sprite", "宠物", "吉祥物", "精灵图"],
+}
+
+# Discovery and management skills can route work, but they do not perform the
+# product-domain capability they mention in their own descriptions.
+META_SKILLS = {
+    "search-skill",
+    "skill-atlas",
+    "skill-installer",
+    "skill-manager",
+    "skill-update-auditor",
 }
 
 
@@ -291,6 +301,32 @@ def research_targets(request: str, capabilities: list[str]) -> list[dict[str, An
                 ],
             }
         )
+    component_terms = (
+        "component",
+        "library",
+        "design system",
+        "ui kit",
+        "liquid glass",
+        "组件",
+        "组件库",
+        "设计系统",
+    )
+    if (
+        any(key in capabilities for key in ("frontend-ui", "design-ux", "hmi-design"))
+        and any(contains_term(text, term) for term in component_terms)
+    ):
+        subject = " ".join(terms[:4]) or "interface design"
+        targets.append(
+            {
+                "type": "component-library",
+                "subject": subject,
+                "reason": "A component library supplies executable UI primitives; compare framework compatibility, accessibility, bundle cost, maintenance, license, and design fit separately from Agent skills.",
+                "queries": [
+                    f"best maintained {subject} React component library accessibility",
+                    f"{subject} UI component library GitHub npm license bundle size",
+                ],
+            }
+        )
     return targets
 
 
@@ -327,6 +363,8 @@ def stack_matches_product(record: dict[str, Any], product: str) -> bool:
 def score_record(
     record: dict[str, Any], capability: str, product: str, product_terms: list[str]
 ) -> tuple[int, list[str]]:
+    if record.get("name", "").lower() in META_SKILLS:
+        return 0, []
     if not stack_matches_product(record, product):
         return 0, []
     name = record.get("name", "").lower()
@@ -462,6 +500,38 @@ def build_orchestration(use_now: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return phases
 
 
+def build_local_artifact_orchestration(
+    skill_phases: list[dict[str, Any]],
+    component_libraries: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    plan = []
+    for phase in skill_phases:
+        for skill in phase["skills"]:
+            plan.append(
+                {
+                    "stage": phase["phase"],
+                    "role": skill["role"],
+                    "artifact_type": "skill",
+                    "artifact": skill["skill"],
+                    "availability": "installed",
+                    "path": skill["path"],
+                }
+            )
+    for library in component_libraries:
+        plan.append(
+            {
+                "stage": "production",
+                "role": "implementation",
+                "artifact_type": "component-library",
+                "artifact": library["name"],
+                "availability": library["availability"],
+                "path": library["repository_path"],
+            }
+        )
+    stage_order = {"research": 0, "design": 1, "production": 2, "verification": 3}
+    return sorted(plan, key=lambda item: stage_order[item["stage"]])
+
+
 def match_market_candidates(
     product: str,
     capabilities: list[str],
@@ -482,16 +552,24 @@ def match_market_candidates(
         keywords = candidate.get("keywords", [])
         if keywords and not any(contains_term(text, keyword.lower()) for keyword in keywords):
             continue
-        installed = candidate.get("name", "") in installed_names
+        artifact_type = candidate.get("artifact_type", "skill")
+        installed = artifact_type == "skill" and candidate.get("name", "") in installed_names
+        availability = {
+            "component-library": "dependency-required",
+            "model": "selection-required",
+            "software-integration": "integration-required",
+            "domain-reference": "reference-required",
+        }.get(artifact_type, "installed" if installed else "install-required")
         matches.append(
             {
                 "name": candidate.get("name", ""),
+                "artifact_type": artifact_type,
                 "url": candidate.get("url", ""),
                 "capabilities": matched_capabilities,
                 "roles": candidate.get("roles", []),
                 "platforms": candidate.get("platforms", []),
                 "score": candidate.get("score"),
-                "availability": "installed" if installed else "install-required",
+                "availability": availability,
                 "review_status": "current" if market_fresh else "refresh-required",
             }
         )
@@ -523,6 +601,8 @@ def build_reviewed_orchestration(matches: list[dict[str, Any]]) -> list[dict[str
         plan.append(
             {
                 "role": role,
+                "artifact": selected["name"],
+                "artifact_type": selected["artifact_type"],
                 "skill": selected["name"],
                 "url": selected["url"],
                 "availability": selected["availability"],
@@ -642,7 +722,7 @@ def emit_markdown(result: dict[str, Any], include_orchestration: bool) -> None:
         print()
         for item in result["reviewed_market_matches"]:
             roles = ", ".join(item["roles"]) or "unassigned"
-            print(f"- {item['name']} ({item['availability']}; review: {item['review_status']}; roles: {roles})")
+            print(f"- {item['name']} ({item['artifact_type']}; {item['availability']}; review: {item['review_status']}; roles: {roles})")
             print(f"  - source: {item['url']}")
         print()
 
@@ -664,6 +744,17 @@ def emit_markdown(result: dict[str, Any], include_orchestration: bool) -> None:
             print(f"- {criterion['criterion']}: {criterion['weight']} points")
             print(f"  - evidence: {criterion['evidence']}")
         print()
+
+    if result.get("local_component_libraries"):
+        print("## Local Component Libraries")
+        print()
+        for item in result["local_component_libraries"]:
+            capabilities = ", ".join(item["matched_capabilities"])
+            print(f"- {item['name']} ({item['version']}; {item['availability']})")
+            print(f"  - capabilities: {capabilities}")
+            print(f"  - manifest: `{item['manifest_path']}`")
+        print()
+
     print("## Required Capabilities")
     print()
     for capability in result["detected_capabilities"]:
@@ -691,6 +782,16 @@ def emit_markdown(result: dict[str, Any], include_orchestration: bool) -> None:
             for item in phase["skills"]:
                 print(f"  - {item['skill']}: {item['role']} for {item['capability_label']}")
         print()
+
+        if result.get("artifact_orchestration"):
+            print("## Local Artifact Plan")
+            print()
+            for item in result["artifact_orchestration"]:
+                print(
+                    f"- {item['stage']}: {item['artifact']} "
+                    f"({item['artifact_type']}; {item['role']}; {item['availability']})"
+                )
+            print()
 
         if result.get("reviewed_orchestration"):
             print("## Reviewed Cross-Skill Plan")

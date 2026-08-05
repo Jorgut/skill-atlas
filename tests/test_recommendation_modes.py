@@ -20,8 +20,65 @@ LOCAL_UX = {
     "maintenance_class": "user-authored",
 }
 
+LOCAL_SKILL_ATLAS = {
+    "name": "skill-atlas",
+    "description": "Discover and orchestrate skills for CAD, Rhino, Blender, and product workflows",
+    "path": "/skills/skill-atlas/SKILL.md",
+    "root_class": "agents-loadable",
+    "maintenance_class": "user-authored",
+}
+
+LOCAL_ARCHVIZ = {
+    "name": "archviz",
+    "description": "Architectural visualization in Blender for interiors and exteriors",
+    "path": "/skills/archviz/SKILL.md",
+    "root_class": "agents-loadable",
+    "maintenance_class": "external-maintained",
+}
+
+LOCAL_PROCEDURAL_MODELING = {
+    "name": "procedural-modeling",
+    "description": "Procedural asset creation for buildings and terrain using Blender",
+    "path": "/skills/procedural-modeling/SKILL.md",
+    "root_class": "agents-loadable",
+    "maintenance_class": "external-maintained",
+}
+
 
 class RecommendationModeTests(unittest.TestCase):
+    def test_installed_architecture_skills_fill_instruction_capabilities(self) -> None:
+        result = recommend_skills.build_recommendation(
+            "Design an architectural interior and create a procedural Blender model",
+            [LOCAL_ARCHVIZ, LOCAL_PROCEDURAL_MODELING],
+            2,
+            "quick",
+        )
+
+        matches = {
+            (item["capability"], item["skill"])
+            for item in result["use_now"]
+        }
+
+        self.assertIn(("architecture-interior", "archviz"), matches)
+        self.assertIn(("cad-3d-modeling", "procedural-modeling"), matches)
+
+    def test_meta_skill_does_not_fill_cad_execution_gap(self) -> None:
+        result = recommend_skills.build_recommendation(
+            "Automate Rhino CAD and BIM modeling",
+            [LOCAL_SKILL_ATLAS],
+            2,
+            "quick",
+        )
+
+        cad_matches = [
+            item for item in result["use_now"]
+            if item["capability"] == "cad-3d-modeling"
+        ]
+        gaps = {item["capability"] for item in result["external_search_gaps"]}
+
+        self.assertEqual(cad_matches, [])
+        self.assertIn("cad-3d-modeling", gaps)
+
     def test_reviewed_candidates_are_filtered_and_ordered_by_role(self) -> None:
         candidates = [
             {
@@ -97,6 +154,37 @@ class RecommendationModeTests(unittest.TestCase):
 
         self.assertEqual(matches[0]["availability"], "installed")
         self.assertEqual(matches[0]["review_status"], "refresh-required")
+
+    def test_component_library_keeps_its_type_through_orchestration(self) -> None:
+        matches = recommend_skills.match_market_candidates(
+            "Build a React liquid glass component library",
+            ["frontend-ui", "design-ux"],
+            [{
+                "name": "@jorgut/liquid-glass",
+                "artifact_type": "component-library",
+                "url": "https://github.com/Jorgut/liquid-glass-design",
+                "capabilities": ["frontend-ui", "design-ux"],
+                "roles": ["implementation"],
+                "keywords": ["react", "liquid glass"],
+                "score": 90,
+            }],
+            set(),
+            True,
+        )
+        plan = recommend_skills.build_reviewed_orchestration(matches)
+
+        self.assertEqual(matches[0]["artifact_type"], "component-library")
+        self.assertEqual(matches[0]["availability"], "dependency-required")
+        self.assertEqual(plan[0]["artifact"], "@jorgut/liquid-glass")
+        self.assertEqual(plan[0]["artifact_type"], "component-library")
+
+    def test_explicit_ui_library_request_creates_component_research(self) -> None:
+        targets = recommend_skills.research_targets(
+            "Build a React liquid glass component library",
+            ["frontend-ui", "design-ux"],
+        )
+
+        self.assertIn("component-library", {item["type"] for item in targets})
 
     def test_balanced_compares_even_when_local_match_exists(self) -> None:
         result = recommend_skills.build_recommendation(
