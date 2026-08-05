@@ -208,6 +208,8 @@ The deterministic CLI does not browse the internet. In `balanced` and `benchmark
 
 Every unified `recommend` or `orchestrate` invocation checks the reviewed public-market snapshot under `~/.local/share/skill-atlas`. Default freshness windows are 168 hours for `quick`, 24 hours for `balanced`, and zero for `benchmark`. `benchmark` and `--refresh` always set `market_refresh_required`. Skill Atlas cannot assume every Agent platform supports startup hooks; a platform startup task may run `market status`, but it must not perform a full market crawl automatically.
 
+Reviewed candidates may include optional `roles`, `keywords`, and `platforms`. Roles use `research`, `design`, `discovery`, `planning`, `implementation`, `review`, or `verification`. A fresh matching snapshot produces `reviewed_market_matches` and an ordered `reviewed_orchestration`; these remain separate from local `use_now` entries. Always preserve both installation state and review freshness, and never execute an external entry marked `install-required` or `refresh-required`.
+
 2. Return these sections when applicable:
 
 - `Required Capabilities`: inferred work areas such as product planning, UI/UX, backend, storage, authentication, AI, testing, documents, deployment, or payments

@@ -143,12 +143,40 @@ The active Agent must then research and review the candidates. Completed results
     {"name": "Community list", "type": "community", "url": "https://github.com/example/awesome-skills"}
   ],
   "candidates": [
-    {"name": "Candidate", "url": "https://github.com/example/candidate", "capabilities": ["design-ux"]}
+    {
+      "name": "Candidate",
+      "url": "https://github.com/example/candidate",
+      "capabilities": ["design-ux"],
+      "roles": ["design", "review"],
+      "keywords": ["react", "hmi"],
+      "platforms": ["codex", "opencode", "claude"],
+      "score": 91
+    }
   ]
 }
 ```
 
 Save reviewed results with `market refresh --results results.json`. Generating a packet alone remains `research-required` and never updates the freshness timestamp. Skill Atlas does not install a universal startup hook because Agent platforms differ; platform automation may run `market status`, while full research stays TTL-driven or explicit.
+
+### Reuse Reviewed Skills in an Orchestration
+
+Candidate metadata can assign one or more ordered roles: `research`, `design`, `discovery`, `planning`, `implementation`, `review`, and `verification`. `keywords` prevent a general capability match from recommending a domain-specific skill for the wrong product. An optional `score` from 0 to 100 ranks candidates reviewed with the shared rubric; the highest-scored non-duplicate candidate wins each role.
+
+For a React interaction workflow, save reviewed entries such as React Bits' `apple-design`, `find-animation-opportunities`, `improve-animations`, and `review-animations`, plus a reviewed implementation skill such as `motion-dev-animations`. Then run:
+
+```bash
+python3 scripts/skill_atlas.py orchestrate plan \
+  "Build an interactive React interface with React Bits, motion, accessibility, and performance" \
+  --mode balanced
+```
+
+The result keeps three facts separate:
+
+- `use_now`: locally installed and loadable skills
+- `reviewed_market_matches`: relevant candidates from the saved market snapshot
+- `reviewed_orchestration`: one selected skill per ordered role, with overlapping candidates listed as alternatives
+
+`installed` means the skill name was found locally. `install-required` means the plan may recommend it but cannot execute it. `refresh-required` means the saved research is outside the selected freshness policy and must be checked again.
 
 ## Recurring Competitor Comparisons
 
@@ -200,7 +228,7 @@ A clean static scan is a gate, not proof that third-party code is safe. Review s
 
 ## Updating Skill Atlas
 
-Skill Atlas does not silently update itself. Version `0.5.0-beta` supports reviewed local release directories and checksum-verified archives.
+Skill Atlas does not silently update itself. Version `0.6.0-beta` supports reviewed local release directories and checksum-verified archives.
 
 Inspect the current installation:
 
@@ -247,4 +275,4 @@ See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, dis
 
 ## Status
 
-Skill Atlas is currently `0.5.0-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.6.0-beta`. Interfaces and platform adapters may change before the stable release.
