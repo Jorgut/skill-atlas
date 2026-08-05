@@ -145,6 +145,7 @@ The active Agent must then research and review the candidates. Completed results
   "candidates": [
     {
       "name": "Candidate",
+      "artifact_type": "skill",
       "url": "https://github.com/example/candidate",
       "capabilities": ["design-ux"],
       "roles": ["design", "review"],
@@ -160,7 +161,7 @@ Save reviewed results with `market refresh --results results.json`. Generating a
 
 ### Reuse Reviewed Skills in an Orchestration
 
-Candidate metadata can assign one or more ordered roles: `research`, `design`, `discovery`, `planning`, `implementation`, `review`, and `verification`. `keywords` prevent a general capability match from recommending a domain-specific skill for the wrong product. An optional `score` from 0 to 100 ranks candidates reviewed with the shared rubric; the highest-scored non-duplicate candidate wins each role.
+Candidate metadata can assign an `artifact_type`: `skill` (the backward-compatible default), `component-library`, `model`, `software-integration`, or `domain-reference`. Component libraries remain executable project dependencies and are never copied into Skill Atlas. Candidate roles use `research`, `design`, `discovery`, `planning`, `implementation`, `review`, and `verification`. `keywords` prevent a general capability match from recommending a domain-specific artifact for the wrong product. An optional `score` from 0 to 100 ranks candidates reviewed with the shared rubric; the highest-scored non-duplicate candidate wins each role.
 
 For a React interaction workflow, save reviewed entries such as React Bits' `apple-design`, `find-animation-opportunities`, `improve-animations`, and `review-animations`, plus a reviewed implementation skill such as `motion-dev-animations`. Then run:
 
@@ -170,13 +171,23 @@ python3 scripts/skill_atlas.py orchestrate plan \
   --mode balanced
 ```
 
+Scan a local component repository only when the user supplies its scope:
+
+```bash
+python3 scripts/skill_atlas.py orchestrate plan \
+  "Build a React liquid glass interface" \
+  --component-root /path/to/liquid-glass-design
+```
+
+The root may be a repository containing `component-library.json` or the manifest itself. Skill Atlas does not crawl the entire machine for package manifests.
+
 The result keeps three facts separate:
 
 - `use_now`: locally installed and loadable skills
-- `reviewed_market_matches`: relevant candidates from the saved market snapshot
-- `reviewed_orchestration`: one selected skill per ordered role, with overlapping candidates listed as alternatives
+- `reviewed_market_matches`: relevant typed artifacts from the saved market snapshot
+- `reviewed_orchestration`: one selected artifact per ordered role, with overlapping candidates listed as alternatives
 
-`installed` means the skill name was found locally. `install-required` means the plan may recommend it but cannot execute it. `refresh-required` means the saved research is outside the selected freshness policy and must be checked again.
+`installed` means a Skill name was found locally. `install-required` applies to a missing Skill, while `dependency-required` applies to a component library that must be added to the target project. `refresh-required` means the saved research is outside the selected freshness policy and must be checked again.
 
 ## Recurring Competitor Comparisons
 
@@ -228,7 +239,7 @@ A clean static scan is a gate, not proof that third-party code is safe. Review s
 
 ## Updating Skill Atlas
 
-Skill Atlas does not silently update itself. Version `0.6.0-beta` supports reviewed local release directories and checksum-verified archives.
+Skill Atlas does not silently update itself. Version `0.6.2-beta` supports reviewed local release directories and checksum-verified archives.
 
 Inspect the current installation:
 
@@ -275,4 +286,4 @@ See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, dis
 
 ## Status
 
-Skill Atlas is currently `0.6.0-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.6.2-beta`. Interfaces and platform adapters may change before the stable release.

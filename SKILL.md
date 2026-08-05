@@ -1,6 +1,6 @@
 ---
 name: skill-atlas
-description: Audit, discover, recommend, orchestrate, monitor, and safely manage agent skills across Codex, OpenCode, Claude-style agents, plugin caches, and configurable skill roots. Use when the user wants to inventory installed skills, detect duplicates or symlinks, check upstream freshness, compare public alternatives once or periodically, review third-party skill safety, plan cross-platform consolidation, describe a product or professional task and ask which skills should be combined, compare current AI models for a workflow, or find skills and connectors for software such as design, HMI, animation, CAD, and 3D modeling tools. The skill is platform-neutral and local-aware. It reports and recommends before acting; it must not overwrite, delete, symlink, install, or upgrade skills without explicit confirmation.
+description: Audit, discover, recommend, orchestrate, monitor, and safely manage agent skills across Codex, OpenCode, Claude-style agents, plugin caches, and configurable skill roots. Use when the user wants to inventory installed skills, detect duplicates or symlinks, check upstream freshness, compare public alternatives once or periodically, review third-party skill safety, plan cross-platform consolidation, describe a product or professional task and ask which skills, component libraries, models, or software integrations should be combined, or find connectors for design, HMI, animation, CAD, and 3D modeling tools. The skill is platform-neutral and local-aware. It reports and recommends before acting; it must not overwrite, delete, symlink, install, or upgrade skills without explicit confirmation.
 ---
 
 # Skill Atlas
@@ -107,6 +107,14 @@ python3 <skill-root>/scripts/skill_atlas.py market status
 python3 <skill-root>/scripts/skill_atlas.py market refresh --category ui-ux
 python3 <skill-root>/scripts/skill_atlas.py monitor add closeout --interval monthly
 python3 <skill-root>/scripts/skill_atlas.py monitor due
+```
+
+To discover a local component library, scope the scan explicitly instead of crawling arbitrary project trees:
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py orchestrate plan \
+  "Build a React liquid glass interface" \
+  --component-root /path/to/component-repository
 ```
 
 ## Recurring Competitor Monitoring
@@ -226,6 +234,7 @@ Reviewed candidates may include optional `roles`, `keywords`, and `platforms`. R
 4. Distinguish artifact types:
 
 - a `skill` supplies agent instructions, workflows, scripts, or domain knowledge
+- a `component-library` supplies executable project code and UI primitives; catalog its metadata and installation status, but never copy its source into Skill Atlas
 - a `model` is a time-sensitive external capability that requires current benchmark, quality, license, cost, latency, and deployment research
 - a `software integration` may require the actual desktop application, CLI, scripting API, plugin, MCP server, or computer-control capability
 - a `domain reference` supplies standards and constraints that general creation skills may miss
