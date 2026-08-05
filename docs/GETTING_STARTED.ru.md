@@ -135,6 +135,32 @@ $skill-atlas market refresh --category ui-ux
 
 Это всё ещё `research-required`. Agent должен проверить хотя бы один маркетплейс, один официальный источник или GitHub и один источник сообщества, затем сохранить результат через `market refresh --results results.json`. Флаг `--refresh` у рекомендации игнорирует кэш.
 
+### Повторное использование проверенной комбинации навыков
+
+Кандидаты рынка могут содержать `roles`, `keywords` и `platforms`. Поддерживаемые роли: `research`, `design`, `discovery`, `planning`, `implementation`, `review` и `verification`. Ключевые слова не позволяют рекомендовать специализированный навык для неподходящей задачи.
+
+Например, после проверки навыков React Bits и навыка реализации сохраните кандидата так:
+
+```json
+{
+  "name": "review-animations",
+  "url": "https://github.com/DavidHDev/react-bits",
+  "capabilities": ["animation-motion", "design-validation"],
+  "roles": ["review"],
+  "keywords": ["react", "interaction", "motion"],
+  "platforms": ["codex", "opencode", "claude"],
+  "score": 90
+}
+```
+
+После сохранения полного проверенного файла результатов выполните:
+
+```text
+$skill-atlas orchestrate plan Создай интерактивный интерфейс React с React Bits, доступной анимацией и проверкой производительности --mode balanced
+```
+
+В выводе `use_now` означает локально установленные навыки; `reviewed_market_matches` берётся из сохранённого снимка; `reviewed_orchestration` выбирает один навык на роль и показывает пересекающиеся варианты как альтернативы. `install-required` требует явного подтверждения установки. `refresh-required` требует нового веб-исследования.
+
 Проверьте комбинацию:
 
 ```text

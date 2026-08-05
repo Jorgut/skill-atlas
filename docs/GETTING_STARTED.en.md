@@ -135,6 +135,32 @@ $skill-atlas market refresh --category ui-ux
 
 This remains `research-required`. The Agent must actually research and review at least one marketplace, one official or GitHub source, and one community source, then save results with `market refresh --results results.json`. Add `--refresh` to a recommendation when the cache must be ignored.
 
+### Reuse a Reviewed Skill Combination
+
+Market candidates may declare `roles`, `keywords`, and `platforms`. Supported roles are `research`, `design`, `discovery`, `planning`, `implementation`, `review`, and `verification`. Keywords keep specialized candidates tied to relevant requests.
+
+For example, after reviewing React Bits' animation skills and an implementation skill, record candidates like this:
+
+```json
+{
+  "name": "review-animations",
+  "url": "https://github.com/DavidHDev/react-bits",
+  "capabilities": ["animation-motion", "design-validation"],
+  "roles": ["review"],
+  "keywords": ["react", "interaction", "motion"],
+  "platforms": ["codex", "opencode", "claude"],
+  "score": 90
+}
+```
+
+Save the complete reviewed results file, then run:
+
+```text
+$skill-atlas orchestrate plan Build an interactive React interface with React Bits, accessible motion, and performance --mode balanced
+```
+
+Read the output carefully: `use_now` is installed locally; `reviewed_market_matches` comes from the saved snapshot; `reviewed_orchestration` selects one skill per role and lists overlaps as alternatives. `install-required` needs explicit installation approval. `refresh-required` needs current web research before selection.
+
 Validate the proposed combination:
 
 ```text

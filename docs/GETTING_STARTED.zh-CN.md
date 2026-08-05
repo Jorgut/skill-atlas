@@ -152,6 +152,32 @@ $skill-atlas market refresh --category ui-ux
 
 这时仍是 `research-required`。Agent 必须实际搜索并审查至少一个公开市场、一个官方或 GitHub 来源、一个社区精选来源，再使用 `market refresh --results results.json` 保存结果。需要无视缓存时，在推荐命令后加 `--refresh`。
 
+### 复用已经审核的 Skill 组合
+
+市场候选可以填写 `roles`、`keywords` 和 `platforms`。角色支持 `research`、`design`、`discovery`、`planning`、`implementation`、`review`、`verification`。`keywords` 用来防止专业 Skill 被推荐给不相关的任务。
+
+例如，完成 React Bits 动画 Skills 和实现类 Skill 的联网审查后，可以在结果文件中记录：
+
+```json
+{
+  "name": "review-animations",
+  "url": "https://github.com/DavidHDev/react-bits",
+  "capabilities": ["animation-motion", "design-validation"],
+  "roles": ["review"],
+  "keywords": ["react", "interaction", "motion"],
+  "platforms": ["codex", "opencode", "claude"],
+  "score": 90
+}
+```
+
+保存完整审核结果后执行：
+
+```text
+$skill-atlas orchestrate plan 使用 React Bits 制作具备无障碍和性能验证的 React 交互界面 --mode balanced
+```
+
+输出中的 `use_now` 是本机已经安装的 Skill；`reviewed_market_matches` 来自已保存的市场快照；`reviewed_orchestration` 会按角色各选一个 Skill，并把重叠候选列为备选。`install-required` 表示安装前必须取得明确确认；`refresh-required` 表示必须先重新联网审查。
+
 再检查组合是否合理：
 
 ```text
