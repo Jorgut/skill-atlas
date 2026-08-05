@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import audit_skills
+import component_libraries
 import competitor_monitor
 import discovery_brief
 import install_skill_atlas
@@ -384,6 +385,19 @@ def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
         args.limit,
         getattr(args, "mode", "balanced"),
     )
+    component_roots = [Path(value) for value in getattr(args, "component_root", [])]
+    try:
+        libraries = component_libraries.discover(component_roots)
+    except (OSError, json.JSONDecodeError, component_libraries.ComponentLibraryError) as exc:
+        print(f"Component-library scan refused: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    result["local_component_libraries"] = component_libraries.match(
+        libraries,
+        [item["id"] for item in result["detected_capabilities"]],
+    )
+    result["artifact_orchestration"] = recommend_skills.build_local_artifact_orchestration(
+        result["orchestration"], result["local_component_libraries"]
+    )
     research_mode = result["research_mode"]
     ttl_hours = args.market_ttl_hours
     if ttl_hours is None:
@@ -457,7 +471,7 @@ def filter_recommendation(result: dict[str, Any], action: str) -> dict[str, Any]
     result = {
         key: value
         for key, value in result.items()
-        if key not in {"orchestration", "reviewed_orchestration"}
+        if key not in {"orchestration", "reviewed_orchestration", "artifact_orchestration"}
     }
     result["recommendation_type"] = action
     if action == "model":
@@ -466,7 +480,9 @@ def filter_recommendation(result: dict[str, Any], action: str) -> dict[str, Any]
         ]
     elif action == "tool":
         result["external_research_targets"] = [
-            item for item in result["external_research_targets"] if item["type"] == "software-integration"
+            item
+            for item in result["external_research_targets"]
+            if item["type"] in {"software-integration", "component-library"}
         ]
     return result
 
@@ -654,6 +670,12 @@ def add_recommend_commands(subparsers: argparse._SubParsersAction) -> None:
         action.add_argument("--refresh", action="store_true", help="Require current market research instead of accepting a fresh cache.")
         action.add_argument("--market-ttl-hours", type=int, help="Override the mode's market-cache TTL.")
         action.add_argument("--market-state-dir", default=default_state_dir())
+        action.add_argument(
+            "--component-root",
+            action="append",
+            default=[],
+            help="Explicit repository root or component-library.json to scan. May be repeated.",
+        )
         action.set_defaults(handler=handle_recommend)
 
 
@@ -679,6 +701,12 @@ def add_orchestrate_commands(subparsers: argparse._SubParsersAction) -> None:
         action.add_argument("--refresh", action="store_true", help="Require current market research instead of accepting a fresh cache.")
         action.add_argument("--market-ttl-hours", type=int, help="Override the mode's market-cache TTL.")
         action.add_argument("--market-state-dir", default=default_state_dir())
+        action.add_argument(
+            "--component-root",
+            action="append",
+            default=[],
+            help="Explicit repository root or component-library.json to scan. May be repeated.",
+        )
         action.set_defaults(handler=handle_orchestrate)
 
 

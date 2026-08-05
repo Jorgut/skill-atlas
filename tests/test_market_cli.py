@@ -56,6 +56,47 @@ class MarketCliTests(unittest.TestCase):
         self.assertEqual(market_args.ttl_hours, 48)
         self.assertTrue(recommend_args.refresh)
 
+    def test_recommendation_discovers_explicit_local_component_library(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "component-library.json").write_text(
+                """{
+  "artifact_type": "component-library",
+  "name": "@jorgut/liquid-glass",
+  "version": "0.1.0",
+  "ecosystem": "react",
+  "capabilities": ["frontend-ui", "design-ux"]
+}
+""",
+                encoding="utf-8",
+            )
+            args = skill_atlas.parse_args([
+                "orchestrate",
+                "plan",
+                "Build a React liquid glass component library",
+                "--root",
+                directory,
+                "--component-root",
+                directory,
+                "--market-state-dir",
+                directory,
+                "--mode",
+                "quick",
+            ])
+
+            result = skill_atlas.recommendation_result(args)
+
+        self.assertEqual(
+            result["local_component_libraries"][0]["name"],
+            "@jorgut/liquid-glass",
+        )
+        component_steps = [
+            item
+            for item in result["artifact_orchestration"]
+            if item["artifact_type"] == "component-library"
+        ]
+        self.assertEqual(component_steps[0]["role"], "implementation")
+
     def test_balanced_recommendation_checks_market_freshness(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             args = skill_atlas.parse_args(
