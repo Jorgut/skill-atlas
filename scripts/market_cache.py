@@ -12,6 +12,15 @@ from typing import Any
 REQUIRED_SOURCE_TYPES = ("marketplace", "official-or-github", "community")
 SOURCE_TYPES = set(REQUIRED_SOURCE_TYPES)
 MODE_TTL_HOURS = {"quick": 168, "balanced": 24, "benchmark": 0}
+ORCHESTRATION_ROLES = {
+    "research",
+    "design",
+    "discovery",
+    "planning",
+    "implementation",
+    "review",
+    "verification",
+}
 
 
 class MarketCacheError(ValueError):
@@ -64,6 +73,24 @@ def validate_results(value: Any) -> dict[str, Any]:
             isinstance(item, str) and item.strip() for item in capabilities
         ):
             raise MarketCacheError("Every candidate requires a non-empty capabilities array.")
+        for field in ("keywords", "platforms"):
+            values = candidate.get(field, [])
+            if not isinstance(values, list) or not all(
+                isinstance(item, str) and item.strip() for item in values
+            ):
+                raise MarketCacheError(f"Candidate {field} must be an array of non-empty strings.")
+        roles = candidate.get("roles", [])
+        if not isinstance(roles, list) or not all(role in ORCHESTRATION_ROLES for role in roles):
+            raise MarketCacheError(
+                "Candidate roles must use the supported orchestration role vocabulary."
+            )
+        score = candidate.get("score")
+        if score is not None and (
+            isinstance(score, bool)
+            or not isinstance(score, (int, float))
+            or not 0 <= score <= 100
+        ):
+            raise MarketCacheError("Candidate score must be a number from 0 to 100.")
     return value
 
 

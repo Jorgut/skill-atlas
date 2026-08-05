@@ -22,7 +22,15 @@ RESULTS = {
         {"name": "Awesome skills", "type": "community", "url": "https://github.com/example/awesome"},
     ],
     "candidates": [
-        {"name": "UX candidate", "url": "https://github.com/example/ux", "capabilities": ["design-ux"]}
+        {
+            "name": "UX candidate",
+            "url": "https://github.com/example/ux",
+            "capabilities": ["design-ux"],
+            "roles": ["design", "review"],
+            "keywords": ["ux"],
+            "platforms": ["codex", "claude"],
+            "score": 91,
+        }
     ],
 }
 
@@ -57,6 +65,20 @@ class MarketCacheTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(market_cache.MarketCacheError, "non-empty capabilities"):
             market_cache.validate_results(no_capability)
+
+        invalid_role = {
+            **RESULTS,
+            "candidates": [{**RESULTS["candidates"][0], "roles": ["generate-everything"]}],
+        }
+        with self.assertRaisesRegex(market_cache.MarketCacheError, "role vocabulary"):
+            market_cache.validate_results(invalid_role)
+
+        invalid_score = {
+            **RESULTS,
+            "candidates": [{**RESULTS["candidates"][0], "score": 101}],
+        }
+        with self.assertRaisesRegex(market_cache.MarketCacheError, "0 to 100"):
+            market_cache.validate_results(invalid_score)
 
     def test_refresh_policy_depends_on_mode_and_freshness(self) -> None:
         fresh = {"fresh": True}

@@ -126,6 +126,16 @@ DEFAULT_CAPABILITIES = ["product-planning"]
 
 RESEARCH_MODES = ("quick", "balanced", "benchmark")
 
+ROLE_ORDER = (
+    "research",
+    "design",
+    "discovery",
+    "planning",
+    "implementation",
+    "review",
+    "verification",
+)
+
 COMPARISON_RUBRIC = [
     {"criterion": "task-fit", "weight": 30, "evidence": "Trigger precision and direct coverage of the requested capability."},
     {"criterion": "workflow-quality", "weight": 20, "evidence": "Procedural depth, examples, scripts, references, and output quality."},
@@ -452,6 +462,77 @@ def build_orchestration(use_now: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return phases
 
 
+def match_market_candidates(
+    product: str,
+    capabilities: list[str],
+    candidates: list[dict[str, Any]],
+    installed_names: set[str],
+    market_fresh: bool,
+) -> list[dict[str, Any]]:
+    text = product.lower()
+    matches = []
+    for candidate in candidates:
+        matched_capabilities = [
+            capability
+            for capability in candidate.get("capabilities", [])
+            if capability in capabilities
+        ]
+        if not matched_capabilities:
+            continue
+        keywords = candidate.get("keywords", [])
+        if keywords and not any(contains_term(text, keyword.lower()) for keyword in keywords):
+            continue
+        installed = candidate.get("name", "") in installed_names
+        matches.append(
+            {
+                "name": candidate.get("name", ""),
+                "url": candidate.get("url", ""),
+                "capabilities": matched_capabilities,
+                "roles": candidate.get("roles", []),
+                "platforms": candidate.get("platforms", []),
+                "score": candidate.get("score"),
+                "availability": "installed" if installed else "install-required",
+                "review_status": "current" if market_fresh else "refresh-required",
+            }
+        )
+    if any(item["score"] is not None for item in matches):
+        matches.sort(
+            key=lambda item: (
+                item["score"] is None,
+                -(item["score"] or 0),
+                item["name"],
+            )
+        )
+    return matches
+
+
+def build_reviewed_orchestration(matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_role: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for candidate in matches:
+        for role in candidate["roles"]:
+            by_role[role].append(candidate)
+
+    plan = []
+    used: set[str] = set()
+    for role in ROLE_ORDER:
+        candidates = [item for item in by_role[role] if item["name"] not in used]
+        if not candidates:
+            continue
+        selected = candidates[0]
+        used.add(selected["name"])
+        plan.append(
+            {
+                "role": role,
+                "skill": selected["name"],
+                "url": selected["url"],
+                "availability": selected["availability"],
+                "review_status": selected["review_status"],
+                "alternatives": [item["name"] for item in candidates[1:]],
+            }
+        )
+    return plan
+
+
 def build_recommendation(
     product: str,
     records: list[dict[str, Any]],
@@ -556,6 +637,15 @@ def emit_markdown(result: dict[str, Any], include_orchestration: bool) -> None:
             print("- Next step: execute the external comparison plan and save reviewed results with `skill-atlas market refresh --results FILE`.")
         print()
 
+    if result.get("reviewed_market_matches"):
+        print("## Reviewed Market Matches")
+        print()
+        for item in result["reviewed_market_matches"]:
+            roles = ", ".join(item["roles"]) or "unassigned"
+            print(f"- {item['name']} ({item['availability']}; review: {item['review_status']}; roles: {roles})")
+            print(f"  - source: {item['url']}")
+        print()
+
     if result["external_comparison_plan"]:
         print("## External Benchmark Plan")
         print()
@@ -601,6 +691,17 @@ def emit_markdown(result: dict[str, Any], include_orchestration: bool) -> None:
             for item in phase["skills"]:
                 print(f"  - {item['skill']}: {item['role']} for {item['capability_label']}")
         print()
+
+        if result.get("reviewed_orchestration"):
+            print("## Reviewed Cross-Skill Plan")
+            print()
+            print("This plan may include external candidates. Install-required entries need confirmation; refresh-required entries need current research before selection.")
+            print()
+            for item in result["reviewed_orchestration"]:
+                alternatives = ", ".join(item["alternatives"]) or "none"
+                print(f"- {item['role']}: {item['skill']} ({item['availability']}; review: {item['review_status']})")
+                print(f"  - alternatives: {alternatives}")
+            print()
 
     if result["platform_managed_matches"]:
         print("## Platform-Managed Matches")

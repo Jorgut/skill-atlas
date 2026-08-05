@@ -377,9 +377,10 @@ def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
         request = f"Compare and select current AI models for: {request}"
     elif args.action == "tool":
         request = f"Find software integrations, APIs, plugins, MCP connectors, and skills for: {request}"
+    records = discovery_records(args)
     result = recommend_skills.build_recommendation(
         request,
-        discovery_records(args),
+        records,
         args.limit,
         getattr(args, "mode", "balanced"),
     )
@@ -409,6 +410,26 @@ def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
         args.refresh,
         bool(result["external_search_gaps"]),
     )
+    snapshot = None
+    try:
+        snapshot = cache.load()
+    except (OSError, json.JSONDecodeError, market_cache.MarketCacheError):
+        pass
+    market_matches = recommend_skills.match_market_candidates(
+        request,
+        [item["id"] for item in result["detected_capabilities"]],
+        snapshot.get("candidates", []) if snapshot else [],
+        {
+            record.get("name", "")
+            for record in records
+            if record.get("root_class") in recommend_skills.LOADABLE_ROOTS
+        },
+        not result["market_refresh_required"],
+    )
+    result["reviewed_market_matches"] = market_matches
+    result["reviewed_orchestration"] = recommend_skills.build_reviewed_orchestration(
+        market_matches
+    )
     result["market_policy"] = {
         "force_refresh": args.refresh,
         "required_source_types": list(market_cache.REQUIRED_SOURCE_TYPES),
@@ -433,7 +454,11 @@ def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def filter_recommendation(result: dict[str, Any], action: str) -> dict[str, Any]:
-    result = {key: value for key, value in result.items() if key != "orchestration"}
+    result = {
+        key: value
+        for key, value in result.items()
+        if key not in {"orchestration", "reviewed_orchestration"}
+    }
     result["recommendation_type"] = action
     if action == "model":
         result["external_research_targets"] = [
