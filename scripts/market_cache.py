@@ -21,6 +21,13 @@ ORCHESTRATION_ROLES = {
     "review",
     "verification",
 }
+ARTIFACT_TYPES = {
+    "skill",
+    "component-library",
+    "model",
+    "software-integration",
+    "domain-reference",
+}
 
 
 class MarketCacheError(ValueError):
@@ -68,6 +75,9 @@ def validate_results(value: Any) -> dict[str, Any]:
             raise MarketCacheError("Every candidate must be an object.")
         if not str(candidate.get("name", "")).strip() or not str(candidate.get("url", "")).strip():
             raise MarketCacheError("Every candidate requires a name and URL.")
+        artifact_type = candidate.get("artifact_type", "skill")
+        if artifact_type not in ARTIFACT_TYPES:
+            raise MarketCacheError(f"Unsupported candidate artifact type: {artifact_type}")
         capabilities = candidate.get("capabilities")
         if not isinstance(capabilities, list) or not capabilities or not all(
             isinstance(item, str) and item.strip() for item in capabilities

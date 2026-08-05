@@ -80,6 +80,29 @@ class MarketCacheTests(unittest.TestCase):
         with self.assertRaisesRegex(market_cache.MarketCacheError, "0 to 100"):
             market_cache.validate_results(invalid_score)
 
+        invalid_artifact = {
+            **RESULTS,
+            "candidates": [{**RESULTS["candidates"][0], "artifact_type": "source-code-copy"}],
+        }
+        with self.assertRaisesRegex(market_cache.MarketCacheError, "artifact type"):
+            market_cache.validate_results(invalid_artifact)
+
+    def test_component_library_is_a_supported_artifact(self) -> None:
+        results = {
+            **RESULTS,
+            "candidates": [{
+                **RESULTS["candidates"][0],
+                "name": "@jorgut/liquid-glass",
+                "artifact_type": "component-library",
+                "roles": ["implementation"],
+            }],
+        }
+
+        self.assertEqual(
+            market_cache.validate_results(results)["candidates"][0]["artifact_type"],
+            "component-library",
+        )
+
     def test_refresh_policy_depends_on_mode_and_freshness(self) -> None:
         fresh = {"fresh": True}
         stale = {"fresh": False}
