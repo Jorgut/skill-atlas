@@ -45,7 +45,74 @@ LOCAL_PROCEDURAL_MODELING = {
 }
 
 
+def local_skill(name: str, description: str) -> dict[str, str]:
+    return {
+        "name": name,
+        "description": description,
+        "path": f"/skills/{name}/SKILL.md",
+        "root_class": "agents-loadable",
+        "maintenance_class": "external-maintained",
+    }
+
+
 class RecommendationModeTests(unittest.TestCase):
+    def test_portfolio_media_does_not_select_video_production_skills(self) -> None:
+        result = recommend_skills.build_recommendation(
+            "Build an architecture portfolio website with project images and case studies",
+            [
+                local_skill("remotion-best-practices", "Remotion video creation in React"),
+                local_skill("youtube-clipper", "YouTube video editing and clipping workflow"),
+            ],
+            4,
+            "quick",
+        )
+
+        selected = {item["skill"] for item in result["use_now"]}
+        self.assertNotIn("remotion-best-practices", selected)
+        self.assertNotIn("youtube-clipper", selected)
+
+    def test_presentation_generators_are_mutually_exclusive(self) -> None:
+        result = recommend_skills.build_recommendation(
+            "Create a presentation slide deck for an architecture portfolio",
+            [
+                local_skill("slides", "Create presentation slides and HTML decks"),
+                local_skill("ppt-agent", "Generate professional PPT presentation slides"),
+                local_skill("powerpoint", "Create PowerPoint PPT presentation documents"),
+                local_skill("canva", "Create Canva presentation slides and visual documents"),
+                local_skill("pptx", "Create and edit PPTX presentation slide decks"),
+            ],
+            10,
+            "quick",
+        )
+
+        generators = {
+            item["skill"]
+            for item in result["use_now"]
+            if recommend_skills.generator_family(item["skill"])
+        }
+        self.assertEqual(len(generators), 1)
+        self.assertEqual(result["generator_alternatives"][0]["selected"], next(iter(generators)))
+        self.assertEqual(len(result["generator_alternatives"][0]["alternatives"]), 4)
+
+    def test_reviewed_presentation_generators_choose_one_winner(self) -> None:
+        matches = [
+            {
+                "name": name,
+                "artifact_type": "skill",
+                "roles": ["implementation"],
+                "score": score,
+                "url": f"https://example.com/{name}",
+                "availability": "install-required",
+                "review_status": "current",
+            }
+            for name, score in (("slides", 91), ("ppt-agent", 88), ("canva", 85))
+        ]
+
+        plan = recommend_skills.build_reviewed_orchestration(matches)
+
+        self.assertEqual([item["skill"] for item in plan], ["slides"])
+        self.assertEqual(plan[0]["alternatives"], ["ppt-agent", "canva"])
+
     def test_installed_architecture_skills_fill_instruction_capabilities(self) -> None:
         result = recommend_skills.build_recommendation(
             "Design an architectural interior and create a procedural Blender model",

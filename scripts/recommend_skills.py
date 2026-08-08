@@ -73,7 +73,7 @@ CAPABILITIES = {
     "documents-presentations": {
         "label": "Documents and presentations",
         "intent": ["document", "pdf", "ppt", "pptx", "slide", "presentation", "文档", "演示", "幻灯片", "导出"],
-        "skill": ["pdf", "ppt", "pptx", "slide", "presentation", "docx", "document"],
+        "skill": ["pdf", "ppt", "pptx", "slide", "slides", "presentation", "docx", "document", "documents"],
     },
     "browser-testing": {
         "label": "Browser automation and testing",
@@ -200,6 +200,18 @@ STACK_HINTS = {
 SPECIALIZED_SKILL_HINTS = {
     "slack-gif-creator": ["slack", "gif"],
     "hatch-pet": ["pet", "mascot", "sprite", "宠物", "吉祥物", "精灵图"],
+}
+
+PRESENTATION_GENERATORS = {
+    "slides",
+    "frontend-slides",
+    "presentations",
+    "pptx",
+    "ppt-agent",
+    "ppt-agent-skill",
+    "guizang-ppt-skill",
+    "powerpoint",
+    "canva",
 }
 
 # Discovery and management skills can route work, but they do not perform the
@@ -350,14 +362,73 @@ def unique_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def stack_matches_product(record: dict[str, Any], product: str) -> bool:
     name = record.get("name", "").lower()
+    text = product.lower()
+    if name == "youtube-clipper":
+        return any(
+            contains_term(text, term)
+            for term in ("youtube", "youtube clip", "video clip", "video editing", "剪辑", "切片", "字幕")
+        )
+    if "remotion" in name:
+        if contains_term(text, "remotion"):
+            return True
+        has_video = any(contains_term(text, term) for term in ("video", "视频"))
+        has_production = any(
+            contains_term(text, term)
+            for term in ("create video", "generate video", "render video", "video production", "制作视频", "生成视频", "渲染视频")
+        )
+        return has_video and has_production
     required_terms = SPECIALIZED_SKILL_HINTS.get(name)
-    if required_terms and not any(contains_term(product.lower(), term) for term in required_terms):
+    if required_terms and not any(contains_term(text, term) for term in required_terms):
         return False
     for stack, aliases in STACK_HINTS.items():
         if stack not in name:
             continue
         return any(contains_term(product.lower(), alias) for alias in aliases)
     return True
+
+
+def generator_family(name: str) -> str | None:
+    return "presentation-primary" if name.lower() in PRESENTATION_GENERATORS else None
+
+
+def select_exclusive_generators(
+    items: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for item in items:
+        family = generator_family(item["skill"])
+        if family:
+            grouped[family].append(item)
+
+    selected_names: set[str] = set()
+    notes = []
+    for family, candidates in grouped.items():
+        ordered = sorted(
+            candidates,
+            key=lambda item: (
+                item["capability"] != "documents-presentations",
+                -item["score"],
+                item["skill"],
+            ),
+        )
+        selected_names.add(ordered[0]["skill"])
+        alternatives = list(dict.fromkeys(item["skill"] for item in ordered[1:]))
+        if alternatives:
+            notes.append(
+                {
+                    "family": family,
+                    "selected": ordered[0]["skill"],
+                    "alternatives": alternatives,
+                    "reason": "Overlapping generators are alternatives, not simultaneous primaries.",
+                }
+            )
+
+    filtered = [
+        item
+        for item in items
+        if generator_family(item["skill"]) is None or item["skill"] in selected_names
+    ]
+    return filtered, notes
 
 
 def score_record(
@@ -585,8 +656,29 @@ def match_market_candidates(
 
 
 def build_reviewed_orchestration(matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    family_candidates: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for candidate in matches:
+        family = candidate.get("generator_family") or generator_family(candidate["name"])
+        if family:
+            family_candidates[family].append(candidate)
+    family_winners = {
+        family: sorted(
+            candidates,
+            key=lambda item: (item["score"] is None, -(item["score"] or 0), item["name"]),
+        )[0]["name"]
+        for family, candidates in family_candidates.items()
+    }
+    family_alternatives = {
+        winner: [item["name"] for item in candidates if item["name"] != winner]
+        for family, candidates in family_candidates.items()
+        for winner in [family_winners[family]]
+    }
+
     by_role: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for candidate in matches:
+        family = candidate.get("generator_family") or generator_family(candidate["name"])
+        if family and family_winners[family] != candidate["name"]:
+            continue
         for role in candidate["roles"]:
             by_role[role].append(candidate)
 
@@ -607,7 +699,10 @@ def build_reviewed_orchestration(matches: list[dict[str, Any]]) -> list[dict[str
                 "url": selected["url"],
                 "availability": selected["availability"],
                 "review_status": selected["review_status"],
-                "alternatives": [item["name"] for item in candidates[1:]],
+                "alternatives": list(dict.fromkeys(
+                    [item["name"] for item in candidates[1:]]
+                    + family_alternatives.get(selected["name"], [])
+                )),
             }
         )
     return plan
@@ -666,6 +761,7 @@ def build_recommendation(
                 }
             )
 
+    ready, generator_alternatives = select_exclusive_generators(ready)
     orchestration = build_orchestration(ready)
     comparison_plan = build_comparison_plan(research_mode, capabilities, terms, ready)
     external_required = bool(gaps or comparison_plan)
@@ -677,6 +773,7 @@ def build_recommendation(
             {"id": key, "label": CAPABILITIES[key]["label"]} for key in capabilities
         ],
         "use_now": ready,
+        "generator_alternatives": generator_alternatives,
         "orchestration": orchestration,
         "platform_managed_matches": managed,
         "external_search_gaps": gaps,
@@ -743,6 +840,16 @@ def emit_markdown(result: dict[str, Any], include_orchestration: bool) -> None:
         for criterion in result["comparison_rubric"]:
             print(f"- {criterion['criterion']}: {criterion['weight']} points")
             print(f"  - evidence: {criterion['evidence']}")
+        print()
+
+    if result.get("generator_alternatives"):
+        print("## Generator Alternatives")
+        print()
+        for item in result["generator_alternatives"]:
+            alternatives = ", ".join(item["alternatives"])
+            print(f"- {item['selected']} is the primary for `{item['family']}`")
+            print(f"  - alternatives: {alternatives}")
+            print(f"  - reason: {item['reason']}")
         print()
 
     if result.get("local_component_libraries"):
