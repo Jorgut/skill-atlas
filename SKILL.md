@@ -212,7 +212,7 @@ Add one or more `--root /path/to/skills` options when the user's platform stores
 - `balanced`: inspect local skills and create an external comparison plan for every required capability; target three public candidates per capability
 - `benchmark`: perform the broadest comparison planning for every capability; target eight public candidates with deeper queries
 
-The deterministic CLI does not browse the internet. In `balanced` and `benchmark`, treat `external_comparison_plan` as work for the active Agent: search current public sources, inspect the candidate code, and score local and external candidates with the same 100-point rubric. Keep the recommendation status `provisional` until that work is complete.
+The deterministic CLI does not browse the internet. In `balanced` and `benchmark`, treat `external_comparison_plan` as work for the active Agent: search current public sources, inspect the candidate code, and score local and external candidates with the same 100-point rubric. Keep the recommendation status `provisional` until that work is complete. `provisional` means candidates are unverified and must not be presented as an adoption decision.
 
 Every unified `recommend` or `orchestrate` invocation checks the reviewed public-market snapshot under `~/.local/share/skill-atlas`. Default freshness windows are 168 hours for `quick`, 24 hours for `balanced`, and zero for `benchmark`. `benchmark` and `--refresh` always set `market_refresh_required`. Skill Atlas cannot assume every Agent platform supports startup hooks; a platform startup task may run `market status`, but it must not perform a full market crawl automatically.
 
@@ -229,7 +229,7 @@ Reviewed candidates may include optional `roles`, `keywords`, and `platforms`. R
 - `Comparison Rubric`: task fit 30, workflow quality 20, eval evidence 15, maintenance 10, source and license 10, compatibility 10, safety 5
 - `Models, Tools, and Domain Research`: time-sensitive AI model comparisons, domain standards, application APIs, MCP connectors, plugins, or automation interfaces that are not themselves skills
 
-3. Recommend a minimal stack. Prefer one primary production skill per capability. Add a complementary reviewer or verifier only when it checks a different quality dimension. Do not run two overlapping generator skills as equal primaries without explaining how their outputs will be compared or merged.
+3. Recommend a minimal stack. Prefer one primary production skill per capability. Add a complementary reviewer or verifier only when it checks a different quality dimension. Treat Slides, PPT agents, PowerPoint, Canva, and equivalent presentation generators as one mutually exclusive generator family: select one primary and list the others only as alternatives unless the user explicitly requests a comparison experiment. Require explicit task evidence before selecting narrow media tools such as Remotion or YouTube clipping; the mere presence of images, media, or a portfolio does not justify them.
 
 4. Distinguish artifact types:
 

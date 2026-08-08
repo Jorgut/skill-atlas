@@ -114,7 +114,7 @@ Use Skill Atlas to compare my UX skill with public competitors without replacing
 
 Local and public candidates use one 100-point rubric: task fit 30, workflow quality 20, eval evidence 15, maintenance 10, source and license 10, compatibility 10, and safety 5.
 
-The deterministic CLI creates an external research worklist; it does not browse the web by itself. A `provisional` result means the Agent must execute those searches, inspect sources, and score the candidates before claiming the comparison is complete.
+The deterministic CLI creates an external research worklist; it does not browse the web by itself. A `provisional` result is an unverified candidate set, not an adoption decision: the Agent must execute those searches, inspect sources, and score the candidates before claiming the comparison is complete. Narrow media tools require explicit production intent, and overlapping presentation generators are reduced to one primary plus named alternatives.
 
 Every `recommend` and `orchestrate` invocation checks the reviewed market snapshot. Default TTLs are seven days for `quick`, 24 hours for `balanced`, and zero for `benchmark`. `benchmark` and `--refresh` always require current research.
 
