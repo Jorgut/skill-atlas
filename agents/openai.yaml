@@ -1,4 +1,4 @@
 interface:
   display_name: "Skill Atlas"
-  short_description: "Manage, discover, recommend, orchestrate, and monitor skills"
-  default_prompt: "Use $skill-atlas manage scan by default, select manage, discover, recommend, orchestrate, or monitor for my request, and use manage self status when I ask whether Skill Atlas itself has an update."
+  short_description: "Manage skills, recommend workflows, and guide agent handoff"
+  default_prompt: "Use $skill-atlas manage scan by default, select manage, discover, recommend, orchestrate, or monitor for my request, follow its cross-agent context workflow for shared rules and project handoff, and use manage self status when I ask whether Skill Atlas itself has an update."
