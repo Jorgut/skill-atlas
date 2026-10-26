@@ -104,17 +104,15 @@ Use Skill Atlas to compare my UX skill with public competitors without replacing
 
 ## Cross-Agent Context and Handoff
 
-Use natural language to ask Skill Atlas to connect agent rules and project memory:
+Ask in natural language:
 
 ```text
 Use Skill Atlas to inspect how Codex, Claude Code, OpenCode, and DeepSeek Harness load rules, then set up shared project context and handoff.
 ```
 
-This agent-led workflow discovers the actual instruction entry for each tool, reuses existing project rules and state, and adds a project index when multiple projects need routing. During authorized work, agents record decisions, progress, evidence, blockers, and file scope in the project's established `PROJECT_STATE.md`, `CONTEXT.md`, or equivalent.
+The agent-led workflow discovers tool instruction entries, reuses project rules and state, and adds an index when multiple projects need routing. It records progress and file ownership while preserving history and backups. Model and agent choices follow task requirements and actual capabilities.
 
-Model and tool choices start from the task's outcome, facts, assumptions, and constraints. Multiple agents are useful when their contribution justifies coordination overhead; they are not required for every task.
-
-Reports distinguish **configured files**, **verified loading**, and **verified handoff**. Setup preserves existing files and history, includes backups, and does not imply live chat synchronization, automatic model switching, or task dispatch. The deterministic CLI has no collaboration subcommand; ask the agent to follow the [collaboration guide](docs/cross-agent-collaboration.md).
+Reports distinguish **configured files**, **verified loading**, and **verified handoff**. This is not an extra CLI command or a live chat synchronization service. See the [collaboration guide](docs/cross-agent-collaboration.md) for the procedure.
 
 ## Recommendation Modes
 
@@ -287,6 +285,8 @@ python3 scripts/skill_atlas.py manage self rollback \
 ```
 
 Archive candidates also require `--checksum SHA256`. Network release fetching and unattended GitHub updates are not part of this beta release.
+
+For lower-level helper commands and output formats, see the [component CLI reference](docs/cli-reference.md).
 
 ## Development
 
