@@ -1,6 +1,6 @@
 ---
 name: skill-atlas
-description: Audit, discover, recommend, orchestrate, monitor, and safely manage agent skills across Codex, OpenCode, Claude-style agents, plugin caches, and configurable skill roots. Use when the user wants to inventory installed skills, detect duplicates or symlinks, check upstream freshness, compare public alternatives once or periodically, review third-party skill safety, plan cross-platform consolidation, describe a product or professional task and ask which skills, component libraries, models, or software integrations should be combined, or find connectors for design, HMI, animation, CAD, and 3D modeling tools. The skill is platform-neutral and local-aware. It reports and recommends before acting; it must not overwrite, delete, symlink, install, or upgrade skills without explicit confirmation.
+description: Audit, discover, recommend, orchestrate, monitor, and safely manage agent skills across Codex, OpenCode, Claude-style agents, plugin caches, and configurable skill roots. Use when the user wants to inventory installed skills, detect duplicates or symlinks, check upstream freshness, compare public alternatives once or periodically, review third-party skill safety, plan cross-platform consolidation, describe a product or professional task and ask which skills, component libraries, models, or software integrations should be combined, or find connectors for design, HMI, animation, CAD, and 3D modeling tools. Also use it to connect agent instruction sources, organize per-project context, or verify cross-agent handoff. The skill is platform-neutral and local-aware. It reports and recommends before acting; it must not overwrite, delete, symlink, install, or upgrade skills without explicit confirmation.
 ---
 
 # Skill Atlas
@@ -18,7 +18,12 @@ Choose the workflow from the request:
 - stronger alternatives or competitors for installed skills: run external discovery
 - public-market freshness or a reviewed shared market snapshot: run market
 - recurring competitor comparison with historical differences: run monitor
+- cross-agent rules, project context, or handoff setup: read the cross-agent context workflow below
 - a downloaded or proposed third-party skill: run strict security review
+
+## Cross-Agent Context and Handoff
+
+When asked to connect agent tools, organize per-project memory, or verify shared context, read [docs/cross-agent-collaboration.md](docs/cross-agent-collaboration.md). Discover each tool's actual instruction entry, reuse existing project state, and distinguish configured files from verified loading and handoff. This is an agent-led workflow, not an additional CLI command. Apply setup changes only within the user's authorized scope and preserve backups and concurrent work.
 
 ## Commands
 
