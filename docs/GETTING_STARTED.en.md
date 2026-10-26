@@ -175,6 +175,19 @@ $skill-atlas recommend tool Help an architect automate Rhino, Grasshopper, Blend
 
 A result may include skills, desktop applications, scripting APIs, plugins, or MCP servers. Review each artifact according to its own installation and security model.
 
+### Share Project Context Across Agents
+
+Ask in natural language:
+
+```text
+Use Skill Atlas to inspect Codex, Claude Code, OpenCode, and DeepSeek Harness instruction entries and configure shared project context and handoff.
+```
+
+The agent inspects existing files before making authorized additions. A project index can route multiple projects to their own rules and state. Reuse an existing `PROJECT_STATE.md` or `CONTEXT.md`; during work, maintain decisions, progress, evidence, blockers, and next action. Record file scope for concurrent agents and preserve historical records.
+
+Reports distinguish configured files, verified runtime loading, and verified handoff. File existence alone does not prove cooperation. This does not provide automatic model switching or live chat synchronization. It is an agent-led workflow, with no additional CLI subcommand. See the [collaboration guide](cross-agent-collaboration.md).
+
+
 ## 5. Recurring Competitor Comparisons
 
 Create a monitor:
