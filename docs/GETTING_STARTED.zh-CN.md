@@ -192,6 +192,19 @@ $skill-atlas recommend tool 建筑师使用 Rhino、Grasshopper、Blender 和 Sk
 
 结果可能同时包含 Skill、桌面软件、脚本 API、插件和 MCP。它们不是同一种东西，安装前要分别确认。
 
+### 跨 Agent 共享项目上下文
+
+直接用自然语言请求：
+
+```text
+使用 Skill Atlas 检查 Codex、Claude Code、OpenCode 和 DeepSeek Harness 的规则入口，为它们配置共享项目上下文和交接流程。
+```
+
+AI 会先检查已有文件，再按授权增补工具入口；多个项目可用索引定位各自的规则与状态。已有 `PROJECT_STATE.md` 就继续使用，不必另建 `CONTEXT.md`。执行任务时，AI 维护进展、决定、验证证据和下一步；并行工作再明确文件范围。历史记录保留，逐步核对归属。
+
+报告区分“文件已配置”“运行时已加载”“交接已验证”。它不会仅因文件存在就声称协作成功，也不代表自动切换模型或实时同步聊天。这是 Agent 引导流程，没有新增 CLI 子命令。详见[跨 Agent 协作指南](cross-agent-collaboration.md)。
+
+
 ## 5. 定期竞品对比
 
 ### 第一步：建立监控
