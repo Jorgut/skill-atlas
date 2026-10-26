@@ -5,9 +5,9 @@
 ![License](https://img.shields.io/github/license/Jorgut/skill-atlas?style=flat-square)
 ![Agent Skill](https://img.shields.io/badge/Agent%20Skill-Skill%20Manager-111111?style=flat-square)
 
-Skill Atlas is a local-aware, cross-platform manager for agent skills. It inventories installed skills, detects duplicates and symlinks, plans updates and consolidation, discovers alternatives and competitors, recommends skill stacks for products and professional workflows, and validates multi-skill orchestration.
+Skill Atlas is a local-aware, cross-platform manager for agent skills. It inventories installed skills, detects duplicates and symlinks, plans updates and consolidation, discovers alternatives and competitors, recommends skill stacks for products and professional workflows, validates multi-skill orchestration, and guides shared project context and handoff across agent tools.
 
-It supports Codex, OpenCode, Claude Code, shared `~/.agents/skills` installations, plugin caches, and custom skill roots. Read-only planning is the default.
+It supports Codex, OpenCode, Claude Code, shared `~/.agents/skills` installations, plugin caches, and custom skill roots. Its agent-led collaboration workflow also covers DeepSeek Harness and other tools after verifying their instruction-loading support. Read-only planning is the default.
 
 Beginner guides: [中文](docs/GETTING_STARTED.zh-CN.md) | [English](docs/GETTING_STARTED.en.md) | [Русский](docs/GETTING_STARTED.ru.md)
 
@@ -101,6 +101,18 @@ With `/skill-atlas` or `$skill-atlas`, the rest of the line is the request. Natu
 $skill-atlas find Rhino and Blender skills, connectors, and missing capabilities
 Use Skill Atlas to compare my UX skill with public competitors without replacing mine.
 ```
+
+## Cross-Agent Context and Handoff
+
+Ask in natural language:
+
+```text
+Use Skill Atlas to inspect how Codex, Claude Code, OpenCode, and DeepSeek Harness load rules, then set up shared project context and handoff.
+```
+
+The agent-led workflow discovers tool instruction entries, reuses project rules and state, and adds an index when multiple projects need routing. It records progress and file ownership while preserving history and backups. Model and agent choices follow task requirements and actual capabilities.
+
+Reports distinguish **configured files**, **verified loading**, and **verified handoff**. This is not an extra CLI command or a live chat synchronization service. See the [collaboration guide](docs/cross-agent-collaboration.md) for the procedure.
 
 ## Recommendation Modes
 
@@ -239,7 +251,7 @@ A clean static scan is a gate, not proof that third-party code is safe. Review s
 
 ## Updating Skill Atlas
 
-Skill Atlas does not silently update itself. Version `0.6.2-beta` supports reviewed local release directories and checksum-verified archives.
+Skill Atlas does not silently update itself. The self-update workflow supports reviewed local release directories and checksum-verified archives.
 
 Inspect the current installation:
 
@@ -274,6 +286,8 @@ python3 scripts/skill_atlas.py manage self rollback \
 
 Archive candidates also require `--checksum SHA256`. Network release fetching and unattended GitHub updates are not part of this beta release.
 
+For lower-level helper commands and output formats, see the [component CLI reference](docs/cli-reference.md).
+
 ## Development
 
 Run the focused installer tests:
@@ -286,4 +300,4 @@ See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, dis
 
 ## Status
 
-Skill Atlas is currently `0.6.2-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.6.4-beta`. Interfaces and platform adapters may change before the stable release.

@@ -1,6 +1,6 @@
 ---
 name: skill-atlas
-description: Audit, discover, recommend, orchestrate, monitor, and safely manage agent skills across Codex, OpenCode, Claude-style agents, plugin caches, and configurable skill roots. Use when the user wants to inventory installed skills, detect duplicates or symlinks, check upstream freshness, compare public alternatives once or periodically, review third-party skill safety, plan cross-platform consolidation, describe a product or professional task and ask which skills, component libraries, models, or software integrations should be combined, or find connectors for design, HMI, animation, CAD, and 3D modeling tools. The skill is platform-neutral and local-aware. It reports and recommends before acting; it must not overwrite, delete, symlink, install, or upgrade skills without explicit confirmation.
+description: "Manage agent skills across platforms: inventory, duplicates, upstream evidence, safe updates, public alternatives, task/model/tool recommendations, and multi-skill orchestration. Use also to configure shared rules, per-project context, and cross-agent handoff. Read-only by default; apply changes only within explicit user authorization."
 ---
 
 # Skill Atlas
@@ -18,7 +18,12 @@ Choose the workflow from the request:
 - stronger alternatives or competitors for installed skills: run external discovery
 - public-market freshness or a reviewed shared market snapshot: run market
 - recurring competitor comparison with historical differences: run monitor
+- cross-agent rules, project context, or handoff setup: read the cross-agent context workflow below
 - a downloaded or proposed third-party skill: run strict security review
+
+## Cross-Agent Context and Handoff
+
+When asked to connect agent tools, organize per-project memory, or verify shared context, read [docs/cross-agent-collaboration.md](docs/cross-agent-collaboration.md). Discover each tool's actual instruction entry, reuse existing project state, and distinguish configured files from verified loading and handoff. This is an agent-led workflow, not an additional CLI command. Apply setup changes only within the user's authorized scope and preserve backups and concurrent work.
 
 ## Commands
 
@@ -48,9 +53,9 @@ skill-atlas
 │   ├── model      identify evaluation skills and current model research
 │   └── tool       identify skills, APIs, plugins, MCP, and software connectors
 ├── orchestrate
-    ├── plan       build an ordered multi-skill workflow
-    ├── validate   check role overlap, duplication, and capability gaps
-    └── run        stage an execution plan and wait for explicit confirmation
+│   ├── plan       build an ordered multi-skill workflow
+│   ├── validate   check role overlap, duplication, and capability gaps
+│   └── run        stage an execution plan and wait for explicit confirmation
 ├── market
 │   ├── status     inspect shared public-market snapshot freshness
 │   └── refresh    create a research packet or save reviewed market results
@@ -91,23 +96,6 @@ creates platform skill links, and registers `/skill-atlas` for OpenCode and
 Claude Code. It never overwrites an existing path. Re-running the same install
 is idempotent. Use repeated `--platform codex|opencode|claude` instead of
 `--all-platforms` for a subset.
-
-Use the deterministic CLI when direct script execution is appropriate:
-
-```bash
-python3 <skill-root>/scripts/skill_atlas.py manage
-python3 <skill-root>/scripts/skill_atlas.py install --all-platforms --commands
-python3 <skill-root>/scripts/skill_atlas.py manage status
-python3 <skill-root>/scripts/skill_atlas.py manage self status
-python3 <skill-root>/scripts/skill_atlas.py discover competitors ux-audit
-python3 <skill-root>/scripts/skill_atlas.py recommend product "Design an automotive HMI" --mode balanced
-python3 <skill-root>/scripts/skill_atlas.py recommend model "Product animation" --mode benchmark
-python3 <skill-root>/scripts/skill_atlas.py orchestrate validate "Create product animation" --mode balanced
-python3 <skill-root>/scripts/skill_atlas.py market status
-python3 <skill-root>/scripts/skill_atlas.py market refresh --category ui-ux
-python3 <skill-root>/scripts/skill_atlas.py monitor add closeout --interval monthly
-python3 <skill-root>/scripts/skill_atlas.py monitor due
-```
 
 To discover a local component library, scope the scan explicitly instead of crawling arbitrary project trees:
 
@@ -251,28 +239,6 @@ Use `market refresh` to create a research packet. A completed market snapshot mu
 
 Do not claim a cache is refreshed merely because a packet was generated. Only validated results produce a `completed` snapshot.
 
-Example:
-
-```bash
-python3 <skill-root>/scripts/recommend_skills.py \
-  --request "AI presentation app with document upload, web slides, PDF export, accounts, and deployment"
-```
-
-```bash
-python3 <skill-root>/scripts/recommend_skills.py \
-  --request "Compare current AI models for product animation and orchestrate research, production, and review skills"
-```
-
-```bash
-python3 <skill-root>/scripts/recommend_skills.py \
-  --request "Design an automotive HMI UI/UX system and combine primary design with independent UX validation"
-```
-
-```bash
-python3 <skill-root>/scripts/recommend_skills.py \
-  --request "Find skills and software integrations for an architect using Rhino, Grasshopper, Blender, or SketchUp"
-```
-
 ## External Discovery Workflow
 
 Use this workflow when the user wants to compare local skills with public alternatives or find stronger versions of each skill category.
@@ -336,23 +302,7 @@ Default mode suppresses ordinary Markdown-only links and badges so README refere
 
 7. Do not install or replace anything from the web without explicit user confirmation.
 
-## Useful Commands
-
-Unified entry point:
-
-```bash
-python3 <skill-root>/scripts/skill_atlas.py manage --format markdown
-python3 <skill-root>/scripts/skill_atlas.py manage status --check-upstream
-python3 <skill-root>/scripts/skill_atlas.py manage dedupe
-python3 <skill-root>/scripts/skill_atlas.py manage self status
-python3 <skill-root>/scripts/skill_atlas.py manage self update --source /path/to/reviewed-release
-python3 <skill-root>/scripts/skill_atlas.py manage self rollback
-python3 <skill-root>/scripts/skill_atlas.py discover alternatives ux
-python3 <skill-root>/scripts/skill_atlas.py recommend task "A concise task description"
-python3 <skill-root>/scripts/skill_atlas.py recommend tool "Rhino and Blender automation"
-python3 <skill-root>/scripts/skill_atlas.py orchestrate plan "A concise task description"
-python3 <skill-root>/scripts/skill_atlas.py orchestrate validate "A concise task description"
-```
+## Command Compatibility
 
 Legacy shorthand remains valid: `manage` defaults to `manage scan`; `discover QUERY` defaults to `discover similar QUERY`; `recommend REQUEST` defaults to `recommend task REQUEST`; and `orchestrate REQUEST` defaults to `orchestrate plan REQUEST`.
 
@@ -371,76 +321,7 @@ An applied update stages a reviewed copy in the installation's parent directory,
 
 The public release source is declared in `skill.json`. When `repository` is unset, report `source-not-configured`; do not invent a GitHub update result. Local directories and checksum-verified archives are supported now. Network release fetching may be added only after the repository and release verification contract are published.
 
-The component commands below remain available for automation and debugging.
-
-Markdown summary:
-
-```bash
-python3 <skill-root>/scripts/audit_skills.py --format markdown
-```
-
-Machine-readable JSON:
-
-```bash
-python3 <skill-root>/scripts/audit_skills.py --format json
-```
-
-Recommend skills for a product:
-
-```bash
-python3 <skill-root>/scripts/recommend_skills.py --request "A concise task or product description" --format markdown
-python3 <skill-root>/scripts/recommend_skills.py --request "A concise task or product description" --format json
-python3 <skill-root>/scripts/recommend_skills.py --request "A concise task or product description" --root /custom/skills
-```
-
-`--product` remains a compatibility alias for older callers.
-
-Full TSV inventory:
-
-```bash
-python3 <skill-root>/scripts/audit_skills.py --format tsv
-```
-
-Check recorded upstream URLs. This requires network permission in sandboxed environments:
-
-```bash
-python3 <skill-root>/scripts/audit_skills.py --check-upstream --format markdown
-```
-
-Scan a custom root:
-
-```bash
-python3 <skill-root>/scripts/audit_skills.py --root /path/to/search --format markdown
-```
-
-Generate external discovery briefs:
-
-```bash
-python3 <skill-root>/scripts/discovery_brief.py --format markdown
-python3 <skill-root>/scripts/discovery_brief.py --focus ux --limit 20
-python3 <skill-root>/scripts/discovery_brief.py --format json
-```
-
-Generate full external discovery batches:
-
-```bash
-python3 <skill-root>/scripts/make_discovery_batches.py --format markdown --batch-size 25
-python3 <skill-root>/scripts/make_discovery_batches.py --format json --batch-size 25
-```
-
-Run static security review:
-
-```bash
-python3 <skill-root>/scripts/security_review_skills.py --path /path/to/skill --format markdown
-python3 <skill-root>/scripts/security_review_skills.py --path /path/to/skill --format json
-python3 <skill-root>/scripts/security_review_skills.py --path /path/to/skill --strict --format markdown
-```
-
-Review default local user skill roots:
-
-```bash
-python3 <skill-root>/scripts/security_review_skills.py --format markdown
-```
+For lower-level helpers, alternate output formats, or debugging, read [docs/cli-reference.md](docs/cli-reference.md).
 
 ## Security Review Rules
 
