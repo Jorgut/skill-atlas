@@ -30,7 +30,7 @@ def git(root: Path, *args: str) -> str:
     )
     if result.returncode:
         raise HandoffError(f"Git command failed: {' '.join(args)}")
-    return result.stdout.strip()
+    return result.stdout.rstrip("\n")
 
 
 def repo_root(project: str | Path) -> Path:

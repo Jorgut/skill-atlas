@@ -57,3 +57,24 @@ Distinguish evidence levels in the report:
 Stop at the strongest supported claim. Do not infer runtime loading from file existence or claim live chat synchronization, model switching, task dispatch, or accepted assignments without tool evidence. Do not interrupt an active user session or send a cross-thread test prompt without authorization. When runtime verification is unavailable, finish the safe configuration and clearly record what remains unverified.
 
 Keep setup reversible: retain backups outside managed skill trees, record every changed path, and restore only the intended change after checking for newer edits. Report platform-specific limitations rather than presenting one tool's behavior as universal.
+
+
+## Integrated task checkpoints
+
+This repository includes optional concrete local commands for
+\`checkpoint\`, \`handoff\`, and \`resume\`. These commands persist a small
+task-scoped JSON record in \`.agent-state/tasks/<task>.json\` and immutable
+history records under \`.agent-state/history/<task>/\`.
+They are complementary to an existing \`PROJECT_STATE.md\` or \`CONTEXT.md\`,
+not an instruction to overwrite those files.
+
+The command records Git state without storing a raw diff or session
+transcript. If the new working tree or commit differs from the saved
+snapshot, resume returns \`review-required\`; the receiving agent must
+inspect the difference rather than assuming the previous work is valid.
+The CLI does not start other agents, execute tests, write Git commits,
+or transfer local files between machines. Actual automatic triggers
+remain platform-specific.
+
+The integrated Closeout audit and evidence rules live under
+\`closeout/\`. See [the staged implementation plan](multi-agent-development.md).

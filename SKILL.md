@@ -396,3 +396,32 @@ Before running `update`, make sure the target skill has a recorded `evolution.js
 - Prefer symlinks or one canonical source when the user wants to share one skill across Codex, OpenCode, and Claude.
 - Before any update, preserve the previous file or directory and state the rollback path.
 - Never describe Skill Atlas self-update as automatic or unattended. Its default policy is notification, and write operations require `--apply --confirm`.
+
+
+## Integrated Closeout and task continuity
+
+The bundled \`closeout/SKILL.md\` is the authoritative Closeout procedure.
+Use the Closeout six-plane verification and permission rules for project
+reconciliation, release evidence, and project cleanup. The bundled skill
+must not silently delete branches, deployments, user data, or memory.
+
+For task continuity use the platform-neutral commands in
+\`scripts/skill_atlas.py\`:
+
+- \`checkpoint\`: save a task-scoped Git evidence snapshot after a meaningful milestone.
+- \`handoff\`: record what was completed, what remains, and the next safe action.
+- \`resume\`: perform read-only verification before accepting a handoff.
+- \`closeout audit\`: run bundled read-only project inventory.
+- \`closeout evals\`: validate bundled Closeout evaluation cases.
+
+Read \`docs/multi-agent-development.md\` and the project's own \`AGENTS.md\`,
+\`CLAUDE.md\`, issue, and architectural decisions. Never treat a checkpoint as
+proof a test ran. Never overwrite a dirty working tree or auto-push merely
+to prepare a handoff. The receiving agent must inspect relevant code and
+run appropriate tests. Token exhaustion can interrupt any Agent before
+its next checkpoint, so state recovery also requires direct Git inspection.
+
+Keep the Skill Atlas discovery and recommendation features first-class:
+\`discover\`, \`recommend\`, and \`orchestrate\` must continue to work without
+Closeout or a state file present. Do not automatically install skills or
+switch external models without the appropriate access and authorization.

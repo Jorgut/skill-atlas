@@ -301,3 +301,59 @@ See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, dis
 ## Status
 
 Skill Atlas is currently `0.6.4-beta`. Interfaces and platform adapters may change before the stable release.
+
+
+## Integrated Closeout and multi-agent handoff (development branch)
+
+The original \`discover\`, \`recommend\`, \`orchestrate\`, \`market\`, \`manage\`, and \`monitor\`
+commands remain in place. Skill Atlas now bundles the original Closeout package at
+[\`closeout/\`](closeout/) with its reference files, evaluation suite, and
+read-only project inventory.
+
+### CLI: portable checkpoints and recovery
+
+From a project working directory:
+
+\`\`\`bash
+python3 /path/to/skill-atlas/scripts/skill_atlas.py checkpoint \
+  --project . --task issue-28 --agent Codex \
+  --summary "Camera control implemented" \
+  --completed "Camera basics" --remaining "Object selection" \
+  --next-action "Implement selection and run tests"
+
+python3 /path/to/skill-atlas/scripts/skill_atlas.py handoff \
+  --project . --task issue-28 --agent OpenCode \
+  --summary "Object selection implemented" \
+  --next-action "Verify object transforms" \
+  --test-command "npm test" --test-result passed
+
+python3 /path/to/skill-atlas/scripts/skill_atlas.py resume \
+  --project . --task issue-28
+
+python3 /path/to/skill-atlas/scripts/skill_atlas.py closeout audit --project .
+python3 /path/to/skill-atlas/scripts/skill_atlas.py closeout evals
+\`\`\`
+
+The checkpoint uses the Git branch, HEAD, working-tree change count, and
+status fingerprint; it stores a task-scoped current JSON snapshot plus
+immutable local history under \`.agent-state/\`. Test results are marked
+**agent-reported** rather than independently executed. \`resume\` is strictly
+read-only and flags stale Git evidence. No command commits code, pushes
+state, dispatches another agent, or switches models. Make a reviewed Git
+commit/push when state must move between machines.
+
+Agent tools still need their own instruction-loading configuration.
+See [the updated two-stage development plan](docs/multi-agent-development.md).
+
+### Optional shared installation
+
+\`\`\`bash
+python3 scripts/skill_atlas.py install --all-platforms --commands --with-closeout
+# After reviewing the plan, explicitly repeat with --apply --confirm.
+\`\`\`
+
+This creates one Skill Atlas package and links its bundled Closeout to the
+standard Codex, OpenCode, and Claude Code skill roots. If a separate Closeout
+installation already exists, installation **refuses the conflict** rather than
+deleting, replacing, or migrating the existing copy. Existing standalone
+Closeout installations are left untouched.

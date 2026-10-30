@@ -641,6 +641,7 @@ def add_install_command(subparsers: argparse._SubParsersAction) -> None:
         "--platform", action="append", choices=install_skill_atlas.PLATFORMS, default=[]
     )
     install.add_argument("--commands", action="store_true", help="Register slash commands where supported.")
+    install.add_argument("--with-closeout", action="store_true", help="Also link the bundled Closeout skill (conflicts are reported, never replaced).")
     install.add_argument("--source", help="Skill Atlas package root; defaults to this package.")
     install.add_argument("--home", default=str(Path.home()), help="Target user home directory.")
     install.add_argument("--apply", action="store_true")
