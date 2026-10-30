@@ -24,4 +24,5 @@ jobs:
           python scripts/skill_atlas.py discover similar "design ux" --format json > /tmp/discover.json
           python scripts/skill_atlas.py recommend product "Design an interactive website" --mode quick --format json > /tmp/recommend.json
           python scripts/skill_atlas.py closeout audit --project . --format json > /tmp/closeout.json
+          python scripts/skill_atlas.py create plan 'Create a Skill from GitHub' --from github --format json > /tmp/create.json
           python -c 'import json; assert "result" in json.load(open("/tmp/recommend.json")) or isinstance(json.load(open("/tmp/recommend.json")), dict)'

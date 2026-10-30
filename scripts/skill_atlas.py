@@ -14,6 +14,7 @@ from typing import Any
 
 import audit_skills
 import agent_handoff
+import skill_creation
 import component_libraries
 import competitor_monitor
 import discovery_brief
@@ -821,6 +822,22 @@ def add_closeout_commands(subparsers: argparse._SubParsersAction) -> None:
     evals.set_defaults(handler=handle_closeout)
 
 
+def handle_create(args: argparse.Namespace) -> None:
+    result = skill_creation.run(args)
+    if args.format == "json":
+        json_print(result)
+    else:
+        skill_creation.emit_markdown(result)
+
+
+def add_create_commands(subparsers: argparse._SubParsersAction) -> None:
+    create = subparsers.add_parser("create", help="Plan Skill Development Kit creation without running it.")
+    actions = create.add_subparsers(dest="action", required=True)
+    plan = actions.add_parser("plan", help="Select a skill-creation method and verify a local kit source.")
+    skill_creation.add_arguments(plan)
+    plan.set_defaults(handler=handle_create)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Manage, discover, recommend, orchestrate, refresh markets, and monitor agent skills.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -833,6 +850,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     add_market_commands(subparsers)
     add_agent_commands(subparsers)
     add_closeout_commands(subparsers)
+    add_create_commands(subparsers)
     return parser.parse_args(normalize_legacy_args(list(sys.argv[1:] if argv is None else argv)))
 
 

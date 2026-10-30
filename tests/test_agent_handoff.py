@@ -52,6 +52,24 @@ class HandoffTests(unittest.TestCase):
         self.assertIn("working_tree_digest", result["changed_fields"])
         self.assertEqual((self.project / "README.md").read_text(), "# changed\n")
 
+    def test_modified_content_with_same_git_status_is_detected(self):
+        (self.project / "README.md").write_text("# alpha\n")
+        agent_handoff.run(self.options())
+        (self.project / "README.md").write_text("# beta\n")
+        result = agent_handoff.run(self.options("resume"))
+        self.assertEqual(result["status"], "review-required")
+        self.assertIn("content_digest", result["changed_fields"])
+        self.assertNotIn("working_tree_digest", result["changed_fields"])
+
+    def test_untracked_content_change_is_detected(self):
+        path = self.project / "draft.ts"
+        path.write_text("console.log(1)\n")
+        agent_handoff.run(self.options())
+        path.write_text("console.log(12)\n")
+        result = agent_handoff.run(self.options("resume"))
+        self.assertEqual(result["status"], "review-required")
+        self.assertIn("content_digest", result["changed_fields"])
+
     def test_resume_without_checkpoint_is_read_only(self):
         result = agent_handoff.run(self.options("resume"))
         self.assertEqual(result["status"], "no-checkpoint")

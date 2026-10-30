@@ -52,6 +52,22 @@ def fingerprint(root: Path) -> dict[str, Any]:
     entries = [line for line in raw.splitlines() if line and
                not line[3:].startswith(f"{STATE_DIR}/")]
     normalized = "\n".join(sorted(entries))
+    # Status alone misses content changes when file names and M flags are unchanged.
+    # Hash Git's tracked patch locally without writing source or secrets to the state file.
+    patch = git(root, "diff", "--binary", "HEAD", "--", ".", ":(exclude).agent-state")
+    unstaged_untracked = []
+    for line in entries:
+        if line.startswith("?? "):
+            relative = line[3:]
+            candidate = root / relative
+            try:
+                details = candidate.lstat()
+                unstaged_untracked.append([relative, details.st_size, details.st_mtime_ns])
+            except OSError:
+                unstaged_untracked.append([relative, "missing"])
+    content_digest = hashlib.sha256(
+        (patch + "\n" + json.dumps(unstaged_untracked, sort_keys=True)).encode("utf-8")
+    ).hexdigest()
     try:
         branch = git(root, "symbolic-ref", "--short", "HEAD")
     except HandoffError:
@@ -61,6 +77,7 @@ def fingerprint(root: Path) -> dict[str, Any]:
         "commit": git(root, "rev-parse", "HEAD"),
         "working_tree_changes": len(entries),
         "working_tree_digest": hashlib.sha256(normalized.encode("utf-8")).hexdigest(),
+        "content_digest": content_digest,
     }
 
 
@@ -123,7 +140,7 @@ def inspect_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
         raise HandoffError("Checkpoint schema or task does not match")
     current = fingerprint(root)
     previous = checkpoint.get("git") or {}
-    changed = [field for field in ("branch", "commit", "working_tree_changes", "working_tree_digest")
+    changed = [field for field in ("branch", "commit", "working_tree_changes", "working_tree_digest", "content_digest")
                if current.get(field) != previous.get(field)]
     return {"status": "review-required" if changed else "checkpoint-consistent",
             "state_file": str(target), "changed_fields": changed,

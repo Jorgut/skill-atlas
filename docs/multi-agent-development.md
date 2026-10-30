@@ -65,3 +65,12 @@ Add to project AGENTS.md without replacing existing engineering rules:
 
 This is a behavioral rule, not a deterministic hook. For unavoidable token
 exhaustion, local Git evidence and available commits are the fallback.
+
+
+## Optional creator extension
+
+Skill Development Kit remains independently maintained. The
+`skill-atlas create plan` adapter selects a documented creation method
+and optionally verifies an explicit Kit checkout. It does not build new
+Skills or replace existing Discover behavior. This prevents Skill Atlas from
+becoming a second duplicate implementation of the creator toolkit.
