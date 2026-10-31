@@ -23,7 +23,9 @@ Choose the workflow from the request:
 
 ## Cross-Agent Context and Handoff
 
-When asked to connect agent tools, organize per-project memory, or verify shared context, read [docs/cross-agent-collaboration.md](docs/cross-agent-collaboration.md). Discover each tool's actual instruction entry, reuse existing project state, and distinguish configured files from verified loading and handoff. This is an agent-led workflow, not an additional CLI command. Apply setup changes only within the user's authorized scope and preserve backups and concurrent work.
+When asked to connect agent tools, organize per-project memory, or verify shared context, read [docs/cross-agent-collaboration.md](docs/cross-agent-collaboration.md). Discover each tool's actual instruction entry, reuse existing project state, and distinguish configured files from verified loading and handoff. Rule-entry setup is agent-led; the optional task checkpoint CLI is described under Integrated Closeout and task continuity. Apply setup changes only within the user's authorized scope and preserve backups and concurrent work.
+
+For WorkBuddy setup, read the WorkBuddy adapter discovery section in that guide; verify its effective rules root, project-guidance precedence, account scope, and loading conditions.
 
 ## Commands
 
