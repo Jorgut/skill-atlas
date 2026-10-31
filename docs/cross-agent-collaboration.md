@@ -1,6 +1,6 @@
 # Cross-Agent Context and Handoff
 
-Use this workflow when configuring cooperation across agent tools, diagnosing missing shared context, or organizing project memory. This is an agent-led workflow; it does not add a CLI command, startup hook, message transport, or automatic model switch.
+Use this workflow when configuring cooperation across agent tools, diagnosing missing shared context, or organizing project memory. Rule-entry setup is an agent-led workflow. Optional checkpoint, handoff, and resume CLI commands are documented below; they do not provide startup hooks, message transport, or automatic model switching.
 
 ## Discover before configuring
 
@@ -21,6 +21,34 @@ An index is useful for multiple projects; do not introduce it for a single proje
 Inspect each participating tool's current documentation, installed implementation, and configuration. Common entry candidates include Codex's global `AGENTS.md`, Claude Code's applicable `CLAUDE.md`, OpenCode's configured global `AGENTS.md`, and DeepSeek Harness's home `AGENTS.md`. These are discovery hints, not universal paths or proof of automatic loading. For Hermes and other tools, discover the supported entry rather than guessing.
 
 Confirm environment overrides, instruction precedence, filesystem permissions, project-root discovery, and whether external file references are actually loaded. If references are not expanded, use a supported instructions setting or explicitly instruct the agent to read the target. Avoid copying complete rules into every tool entry when one maintained source is sufficient.
+
+## WorkBuddy adapter discovery
+
+The macOS WorkBuddy build inspected on 2026-10-30 exposes a user/project rules loader and a separate project-guidance loader. Treat these findings as version-specific discovery evidence, not proof of runtime loading on another installation.
+
+- **User rules:** inspect the effective user configuration root and its `rules/` directory. In the inspected installation, the candidate was `~/.workbuddy/rules/`; Markdown `.md` and `.mdc` files are supported. Verify the root from the installed loader, configuration, or diagnostics before writing.
+- **Rule metadata:** the inspected parser recognizes `alwaysApply: true` for always-applied rules and `enabled: false` to disable a rule. Use a small, independently named adapter rather than overwriting a user's existing rule.
+- **Project guidance:** the inspected loader checks the task working directory in this order: `CODEBUDDY.md`, `.codebuddy/CODEBUDDY.md`, then `AGENTS.md`, taking the first readable file. Do not assume that all three are merged or that it searches parent directories. Inspect existing higher-priority guidance before relying on `AGENTS.md`.
+- **Loading conditions:** guidance/rules injection depends on the request path and mode; quick/ask-like paths or previously injected context can skip relevant loaders. Verify a suitable fresh task rather than assuming every request reloads external edits.
+- **Account and memory scope:** the application also has account-scoped user memory. It is a separate mechanism; do not overwrite memory files, databases, credentials, or account state to install a rules adapter. Check account/environment overrides when observed behavior differs from the configured path.
+
+A minimal rule can use this shape, replacing placeholders with verified paths before installation:
+
+```markdown
+---
+alwaysApply: true
+---
+# Shared collaboration entry
+
+Before substantive work, use the file-reading tool to read <shared-rules-file>,
+<project-index-if-used>, and the actual project's existing rules and state.
+Preserve other agents' updates and record file scope before overlapping edits.
+Report inaccessible paths and distinguish configured files from verified loading.
+```
+
+After configuration, use the verification levels below. Ask the receiving WorkBuddy task to identify the files it actually read and summarize the project's objective, current ownership, and next action. Do not dispatch that request without user authorization. If the application has not produced loading evidence, report **configured; loading unverified**.
+
+For current product behavior, consult the installed implementation and [WorkBuddy project documentation](https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Project); do not apply CodeBuddy CLI/IDE instructions to WorkBuddy solely because the products share a name or file convention.
 
 ## Plan and apply a narrow integration
 
@@ -62,22 +90,22 @@ Keep setup reversible: retain backups outside managed skill trees, record every 
 ## Integrated task checkpoints
 
 This repository includes optional concrete local commands for
-\`checkpoint\`, \`handoff\`, and \`resume\`. These commands persist a small
-task-scoped JSON record in \`.agent-state/tasks/<task>.json\` and immutable
-history records under \`.agent-state/history/<task>/\`.
-They are complementary to an existing \`PROJECT_STATE.md\` or \`CONTEXT.md\`,
+`checkpoint`, `handoff`, and `resume`. These commands persist a small
+task-scoped JSON record in `.agent-state/tasks/<task>.json` and immutable
+history records under `.agent-state/history/<task>/`.
+They are complementary to an existing `PROJECT_STATE.md` or `CONTEXT.md`,
 not an instruction to overwrite those files.
 
 The command records Git state without storing a raw diff or session
 transcript. If the new working tree or commit differs from the saved
-snapshot, resume returns \`review-required\`; the receiving agent must
+snapshot, resume returns `review-required`; the receiving agent must
 inspect the difference rather than assuming the previous work is valid.
 The CLI does not start other agents, execute tests, write Git commits,
 or transfer local files between machines. Actual automatic triggers
 remain platform-specific.
 
 The integrated Closeout audit and evidence rules live under
-\`closeout/\`. See [the staged implementation plan](multi-agent-development.md).
+`closeout/`. See [the staged implementation plan](multi-agent-development.md).
 
 
 ## Kimi Code CLI
