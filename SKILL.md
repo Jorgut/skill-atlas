@@ -27,6 +27,8 @@ When asked to connect agent tools, organize per-project memory, or verify shared
 
 For WorkBuddy setup, read the WorkBuddy adapter discovery section in that guide; verify its effective rules root, project-guidance precedence, account scope, and loading conditions.
 
+Reusable public starting points are available in [templates/README.md](templates/README.md): general rules, project rules, and project context. Adapt them to verified tool/project requirements without publishing private records.
+
 ## Commands
 
 Treat this command tree as stable across Agent platforms:
