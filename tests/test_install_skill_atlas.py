@@ -124,6 +124,37 @@ class InstallSkillAtlasTests(unittest.TestCase):
             install_skill_atlas.run(self.args(with_closeout=True, apply=True, confirm=True))
         self.assertEqual((old / "SKILL.md").read_text(), "preserve this independent installation")
 
+    def test_kimi_uses_shared_canonical_skill_without_duplicate(self) -> None:
+        result = install_skill_atlas.run(self.args(
+            all_platforms=False, platform=["kimi"], commands=False,
+            apply=True, confirm=True,
+        ))
+        self.assertEqual(result["status"], "installed")
+        self.assertEqual(result["platforms"], ["kimi"])
+        self.assertEqual(result["kimi_invocation"], "/skill:skill-atlas")
+        self.assertTrue((self.home / ".agents/skills/skill-atlas/SKILL.md").is_file())
+        self.assertFalse((self.home / ".kimi-code/skills/skill-atlas").exists())
+        self.assertIn("native", [item["status"] for item in result["operations"]])
+        repeated = install_skill_atlas.run(self.args(
+            all_platforms=False, platform=["kimi"], commands=False,
+            apply=True, confirm=True,
+        ))
+        self.assertEqual(repeated["status"], "already-installed")
+
+    def test_kimi_closeout_is_shared_without_duplicate_links(self) -> None:
+        (self.source / "closeout/commands").mkdir(parents=True)
+        (self.source / "closeout/SKILL.md").write_text("---\\nname: closeout\\n---\\n")
+        (self.source / "closeout/commands/closeout.md").write_text("Use closeout.")
+        result = install_skill_atlas.run(self.args(
+            all_platforms=False, platform=["kimi"], commands=True,
+            with_closeout=True, apply=True, confirm=True,
+        ))
+        self.assertEqual(result["status"], "installed")
+        self.assertTrue((self.home / ".agents/skills/closeout/SKILL.md").is_file())
+        self.assertEqual(result["slash_commands"], [])
+        self.assertFalse((self.home / ".kimi-code/skills/closeout").exists())
+        self.assertFalse((self.home / ".kimi-code/commands/closeout.md").exists())
+
     def test_apply_requires_matching_confirmation(self) -> None:
         with self.assertRaisesRegex(install_skill_atlas.InstallError, "both --apply and --confirm"):
             install_skill_atlas.run(self.args(apply=True, confirm=False))

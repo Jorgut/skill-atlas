@@ -436,3 +436,17 @@ maintained `skill-development-kit`: `skill-from-github`,
 verify an actual local checkout; `plan-only` does not mean an external
 Skill has executed. Never copy the Kit into Skill Atlas, silently install
 its content, or bypass Atlas's security reviews.
+
+
+## Kimi Code CLI support
+
+Current Kimi Code CLI natively discovers `~/.agents/skills/`, so it can use
+the shared canonical Skill Atlas installation without duplicating copies in
+Kimi-specific skill directories. The optional installer recognizes
+`--platform kimi` and records the native-discovery route. Kimi invokes
+Skills through `/skill:skill-atlas` and `/skill:closeout`.
+
+See [docs/kimi-code.md](docs/kimi-code.md). Validate Kimi's own `AGENTS.md`
+loading, version, skill catalog, and `checkpoint/handoff/resume` on a real
+disposable repository before claiming live platform support. Its documented
+hooks, `kimi -p`, and ACP do not establish automatic rate-limit failover.

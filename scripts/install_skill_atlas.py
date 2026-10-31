@@ -14,7 +14,7 @@ import self_update
 
 
 SKILL_NAME = "skill-atlas"
-PLATFORMS = ("codex", "opencode", "claude")
+PLATFORMS = ("codex", "opencode", "claude", "kimi")
 
 
 class InstallError(RuntimeError):
@@ -34,6 +34,11 @@ def platform_paths(home: Path) -> dict[str, dict[str, Path | None]]:
         "claude": {
             "skill": home / ".claude/skills" / SKILL_NAME,
             "command": home / ".claude/commands" / f"{SKILL_NAME}.md",
+        },
+        "kimi": {
+            # Kimi Code CLI natively scans ~/.agents/skills/; avoid a duplicate link.
+            "skill": None,
+            "command": None,
         },
     }
 
@@ -90,6 +95,14 @@ def build_plan(
     ]
     paths = platform_paths(home)
     for platform in platforms:
+        if platform == "kimi":
+            operations.append({
+                "kind": "kimi-native-skill-discovery",
+                "path": str(canonical),
+                "target": str(canonical),
+                "status": "native",
+            })
+            continue
         skill_path = paths[platform]["skill"]
         assert skill_path is not None
         operations.append(
@@ -122,6 +135,9 @@ def build_plan(
             "status": existing_status(closeout_canonical, closeout_source),
         })
         for platform in platforms:
+            if platform == "kimi":
+                # The generic Closeout link is natively scanned by Kimi too.
+                continue
             platform_skill = paths[platform]["skill"]
             assert platform_skill is not None
             closeout_path = platform_skill.with_name("closeout")
@@ -154,6 +170,7 @@ def build_plan(
         "operations": operations,
         "conflicts": conflicts,
         "codex_invocation": "$skill-atlas",
+        "kimi_invocation": "/skill:skill-atlas" if "kimi" in platforms else None,
         "slash_commands": [f"/{SKILL_NAME}"]
         if commands and any(paths[platform]["command"] is not None for platform in platforms)
         else [],

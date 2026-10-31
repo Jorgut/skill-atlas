@@ -21,7 +21,8 @@ standalone Closeout installations functional and never silently replace them.
    inside Skill Atlas. Do not equate documentation with verified runtime.
 5. Recheck real Git state. Stop and report conflicting uncommitted changes.
    Checkpoint files are local until reviewed, committed and pushed.
-6. Provide optional installation adapters for Codex, Claude Code and OpenCode.
+6. Provide optional installation adapters for Codex, Claude Code, OpenCode,
+   and Kimi Code CLI (native generic Skill discovery).
    Discover DeepSeek Harness, WorkBuddy and other platforms' actual loading
    contracts before claiming integration.
 
@@ -74,3 +75,13 @@ Skill Development Kit remains independently maintained. The
 and optionally verifies an explicit Kit checkout. It does not build new
 Skills or replace existing Discover behavior. This prevents Skill Atlas from
 becoming a second duplicate implementation of the creator toolkit.
+
+
+### Kimi Code follow-up
+
+Kimi Code CLI already supports shared `~/.agents/skills/`, project
+`AGENTS.md`, user hooks, non-interactive `kimi -p` with structured
+stream output, and ACP. Stage 1 includes a Kimi load/handoff smoke test
+on a disposable repository. Stage 2 must independently verify
+provider authentication, quota/error handling, and cancellation before
+adding any automatic dispatch. See [Kimi Code integration](kimi-code.md).
