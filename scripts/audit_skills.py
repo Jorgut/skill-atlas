@@ -20,9 +20,11 @@ from urllib.request import Request, urlopen
 
 
 HOME = Path.home()
+KIMI_CODE_HOME = Path(os.environ.get("KIMI_CODE_HOME", str(HOME / ".kimi-code"))).expanduser()
 DEFAULT_ROOTS = [
     HOME / ".codex" / "skills",
     HOME / ".agents" / "skills",
+    KIMI_CODE_HOME / "skills",
     HOME / ".config" / "opencode" / "skills",
     HOME / ".claude" / "skills",
     HOME / ".codex" / "plugins" / "cache",
@@ -95,6 +97,8 @@ def root_class(path: Path) -> str:
         return "codex-loadable"
     if s.startswith(str(HOME / ".agents" / "skills") + os.sep):
         return "agents-loadable"
+    if s.startswith(str(KIMI_CODE_HOME / "skills") + os.sep):
+        return "kimi-loadable"
     if s.startswith(str(HOME / ".config" / "opencode" / "skills") + os.sep):
         return "opencode-loadable"
     if s.startswith(str(HOME / ".claude" / "skills") + os.sep):

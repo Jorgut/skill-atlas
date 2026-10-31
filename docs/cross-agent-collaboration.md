@@ -78,3 +78,16 @@ remain platform-specific.
 
 The integrated Closeout audit and evidence rules live under
 \`closeout/\`. See [the staged implementation plan](multi-agent-development.md).
+
+
+## Kimi Code CLI
+
+Current Kimi Code CLI loads generic user-level Skills from
+`~/.agents/skills/` and supports project `AGENTS.md` and
+`.kimi-code/AGENTS.md`. The installer selects Kimi's native shared route
+instead of creating extra links. A custom `KIMI_CODE_HOME` affects its
+Kimi-specific directory, not the generic shared Skill root.
+
+Review [Kimi Code support](kimi-code.md) for official documentation and
+verification steps. Do not confuse the current TypeScript Kimi Code CLI with
+the older Python kimi-cli, whose configuration defaults differ.

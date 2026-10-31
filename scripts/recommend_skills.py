@@ -19,6 +19,7 @@ AUDIT_SCRIPT = SCRIPT_DIR / "audit_skills.py"
 LOADABLE_ROOTS = {
     "codex-loadable",
     "agents-loadable",
+    "kimi-loadable",
     "opencode-loadable",
     "claude-loadable",
     "cc-switch",

@@ -353,7 +353,8 @@ python3 scripts/skill_atlas.py install --all-platforms --commands --with-closeou
 ```
 
 This creates one Skill Atlas package and links its bundled Closeout to the
-standard Codex, OpenCode, and Claude Code skill roots. If a separate Closeout
+standard Codex, OpenCode, and Claude Code skill roots. Kimi Code CLI
+natively scans the same shared \x60~/.agents/skills\x60 directory. If a separate Closeout
 installation already exists, installation **refuses the conflict** rather than
 deleting, replacing, or migrating the existing copy. Existing standalone
 Closeout installations are left untouched.
@@ -380,3 +381,20 @@ local Kit checkout for the chosen `SKILL.md`; it does not create a new
 Skill, browse, install dependencies, or run arbitrary external code.
 The Kit's narrower `search-skill` source guidance can complement Atlas's
 broader public discovery and security review, but must not replace it.
+
+
+## Kimi Code CLI integration
+
+Skill Atlas also supports the current official Kimi Code CLI. Run
+`python3 scripts/skill_atlas.py install --platform kimi --with-closeout`
+to preview an installation using Kimi's native `~/.agents/skills/`
+discovery. Review the plan before applying with `--apply --confirm`.
+No duplicate `~/.kimi-code/skills/` link is created.
+
+Invoke the loaded Skills with `/skill:skill-atlas` or `/skill:closeout`
+inside Kimi Code CLI. Kimi can also run the existing project checkpoint,
+handoff, and read-only resume scripts when authorized.
+
+Read [Kimi Code support and verification](docs/kimi-code.md) for platform
+instructions, environment overrides, and the distinction between configured,
+loaded, and handoff-verified states.
