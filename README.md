@@ -116,6 +116,10 @@ Reports distinguish **configured files**, **verified loading**, and **verified h
 
 The guide also covers WorkBuddy rule-entry discovery, project-guidance precedence, account scope, and runtime verification against the installed version.
 
+### Public rule and context templates
+
+Start with the [three public collaboration templates](templates/README.md): global principles, project rules, and project context. Copy only what is missing, fill verified project facts, and keep private records in their intended local or private destination. The templates include first-principles reasoning and UI information hierarchy; they do not install rules automatically.
+
 ## Recommendation Modes
 
 `recommend` and `orchestrate` accept the same `--mode` option:
@@ -302,7 +306,7 @@ See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, dis
 
 ## Status
 
-Skill Atlas is currently `0.6.5-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.6.6-beta`. Interfaces and platform adapters may change before the stable release.
 
 
 ## Integrated Closeout and multi-agent handoff
