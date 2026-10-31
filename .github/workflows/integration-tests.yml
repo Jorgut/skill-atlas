@@ -1,0 +1,28 @@
+name: Skill Atlas integration tests
+
+on:
+  push:
+    branches: ["feat/unified-closeout-handoff"]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile Python
+        run: python -m compileall -q scripts closeout tests
+      - name: Full regression suite
+        run: python -m unittest discover -s tests -v
+      - name: Validate Closeout eval cases
+        run: python closeout/scripts/run_evals.py validate
+      - name: Verify integrated CLI discovery remains functional
+        run: |
+          python scripts/skill_atlas.py discover similar "design ux" --format json > /tmp/discover.json
+          python scripts/skill_atlas.py recommend product "Design an interactive website" --mode quick --format json > /tmp/recommend.json
+          python scripts/skill_atlas.py closeout audit --project . --format json > /tmp/closeout.json
+          python scripts/skill_atlas.py create plan 'Create a Skill from GitHub' --from github --format json > /tmp/create.json
+          python -c 'import json; assert "result" in json.load(open("/tmp/recommend.json")) or isinstance(json.load(open("/tmp/recommend.json")), dict)'

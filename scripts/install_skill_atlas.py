@@ -68,6 +68,7 @@ def build_plan(
     home: Path,
     platforms: list[str],
     commands: bool,
+    with_closeout: bool = False,
 ) -> dict[str, Any]:
     source = source.expanduser().resolve()
     home = home.expanduser().resolve()
@@ -76,6 +77,8 @@ def build_plan(
     if commands and not command_source.is_file():
         raise InstallError(f"missing command adapter: {command_source}")
 
+    if with_closeout and not (source / "closeout/SKILL.md").is_file():
+        raise InstallError("missing bundled Closeout package")
     canonical = home / ".agents/skills" / SKILL_NAME
     operations: list[dict[str, str]] = [
         {
@@ -109,6 +112,35 @@ def build_plan(
                 }
             )
 
+    if with_closeout:
+        closeout_canonical = home / ".agents/skills/closeout"
+        closeout_source = canonical / "closeout"
+        operations.append({
+            "kind": "closeout-canonical-link",
+            "path": str(closeout_canonical),
+            "target": str(closeout_source),
+            "status": existing_status(closeout_canonical, closeout_source),
+        })
+        for platform in platforms:
+            platform_skill = paths[platform]["skill"]
+            assert platform_skill is not None
+            closeout_path = platform_skill.with_name("closeout")
+            operations.append({
+                "kind": f"{platform}-closeout-skill-link",
+                "path": str(closeout_path),
+                "target": str(closeout_canonical),
+                "status": existing_status(closeout_path, closeout_canonical),
+            })
+            command_path = paths[platform]["command"]
+            if commands and command_path is not None:
+                adapter = command_path.with_name("closeout.md")
+                operations.append({
+                    "kind": f"{platform}-closeout-command-link",
+                    "path": str(adapter),
+                    "target": str(closeout_source / "commands/closeout.md"),
+                    "status": existing_status(adapter, closeout_source / "commands/closeout.md"),
+                })
+
     conflicts = [operation for operation in operations if operation["status"] == "conflict"]
     return {
         "action": "install",
@@ -118,6 +150,7 @@ def build_plan(
         "canonical_path": str(canonical),
         "platforms": platforms,
         "commands_requested": commands,
+        "closeout_requested": with_closeout,
         "operations": operations,
         "conflicts": conflicts,
         "codex_invocation": "$skill-atlas",
@@ -160,7 +193,7 @@ def apply_plan(plan: dict[str, Any]) -> dict[str, Any]:
             path = Path(operation["path"])
             target = Path(operation["target"])
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.symlink_to(target, target_is_directory=operation["kind"].endswith("skill-link"))
+            path.symlink_to(target, target_is_directory=operation["kind"].endswith("skill-link") or operation["kind"] == "closeout-canonical-link")
             created_links.append(path)
     except Exception:
         for path in reversed(created_links):
@@ -183,7 +216,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if not platforms:
         raise InstallError("select --all-platforms or at least one --platform")
     source = Path(args.source or Path(__file__).resolve().parent.parent)
-    plan = build_plan(source, Path(args.home), platforms, args.commands)
+    plan = build_plan(source, Path(args.home), platforms, args.commands, getattr(args, "with_closeout", False))
     if args.apply != args.confirm:
         raise InstallError("installation requires both --apply and --confirm")
     if not args.apply:

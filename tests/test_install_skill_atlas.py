@@ -42,6 +42,7 @@ class InstallSkillAtlasTests(unittest.TestCase):
             "all_platforms": True,
             "platform": [],
             "commands": True,
+            "with_closeout": False,
             "source": str(self.source),
             "home": str(self.home),
             "apply": False,
@@ -88,6 +89,40 @@ class InstallSkillAtlasTests(unittest.TestCase):
 
         self.assertEqual(conflict.read_text(encoding="utf-8"), "do not overwrite")
         self.assertFalse((self.home / ".agents/skills/skill-atlas").exists())
+
+
+    def test_optional_bundled_closeout_links(self) -> None:
+        (self.source / "closeout/commands").mkdir(parents=True)
+        (self.source / "closeout/SKILL.md").write_text("---\nname: closeout\n---\n")
+        (self.source / "closeout/commands/closeout.md").write_text("Use closeout.")
+        result = install_skill_atlas.run(self.args(with_closeout=True, apply=True, confirm=True))
+        self.assertEqual(result["status"], "installed")
+        for path in [
+            self.home / ".agents/skills/closeout",
+            self.home / ".codex/skills/closeout",
+            self.home / ".config/opencode/skills/closeout",
+            self.home / ".claude/skills/closeout",
+            self.home / ".config/opencode/commands/closeout.md",
+            self.home / ".claude/commands/closeout.md",
+        ]:
+            self.assertTrue(path.is_symlink(), str(path))
+        self.assertEqual(install_skill_atlas.run(
+            self.args(with_closeout=True, apply=True, confirm=True)
+        )["status"], "already-installed")
+
+    def test_existing_closeout_is_not_overwritten(self) -> None:
+        (self.source / "closeout").mkdir()
+        (self.source / "closeout/SKILL.md").write_text("---\nname: closeout\n---\n")
+        old = self.home / ".agents/skills/closeout"
+        old.parent.mkdir(parents=True)
+        old.mkdir()
+        (old / "SKILL.md").write_text("preserve this independent installation")
+        plan = install_skill_atlas.run(self.args(with_closeout=True))
+        self.assertEqual(plan["status"], "conflict")
+        self.assertFalse((self.home / ".agents/skills/skill-atlas").exists())
+        with self.assertRaises(install_skill_atlas.InstallError):
+            install_skill_atlas.run(self.args(with_closeout=True, apply=True, confirm=True))
+        self.assertEqual((old / "SKILL.md").read_text(), "preserve this independent installation")
 
     def test_apply_requires_matching_confirmation(self) -> None:
         with self.assertRaisesRegex(install_skill_atlas.InstallError, "both --apply and --confirm"):

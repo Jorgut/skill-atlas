@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 import json
 import sys
 from collections import defaultdict
@@ -12,6 +13,8 @@ from pathlib import Path
 from typing import Any
 
 import audit_skills
+import agent_handoff
+import skill_creation
 import component_libraries
 import competitor_monitor
 import discovery_brief
@@ -639,6 +642,7 @@ def add_install_command(subparsers: argparse._SubParsersAction) -> None:
         "--platform", action="append", choices=install_skill_atlas.PLATFORMS, default=[]
     )
     install.add_argument("--commands", action="store_true", help="Register slash commands where supported.")
+    install.add_argument("--with-closeout", action="store_true", help="Also link the bundled Closeout skill (conflicts are reported, never replaced).")
     install.add_argument("--source", help="Skill Atlas package root; defaults to this package.")
     install.add_argument("--home", default=str(Path.home()), help="Target user home directory.")
     install.add_argument("--apply", action="store_true")
@@ -774,6 +778,66 @@ def add_market_commands(subparsers: argparse._SubParsersAction) -> None:
     refresh.set_defaults(handler=handle_market)
 
 
+def handle_agent(args: argparse.Namespace) -> None:
+    result = agent_handoff.run(args)
+    if args.format == "json":
+        json_print(result)
+    else:
+        agent_handoff.emit_markdown(result)
+
+
+def add_agent_commands(subparsers: argparse._SubParsersAction) -> None:
+    for name in ("checkpoint", "handoff", "resume"):
+        action = subparsers.add_parser(name, help=f"{name.title()} an agent task using local Git evidence.")
+        agent_handoff.add_arguments(action)
+        if name != "resume":
+            action.add_argument("--agent", required=True)
+            action.add_argument("--summary", required=True)
+            action.add_argument("--next-action", required=True)
+            action.add_argument("--completed", action="append", default=[])
+            action.add_argument("--remaining", action="append", default=[])
+            action.add_argument("--test-command")
+            action.add_argument("--test-result", choices=("not-run", "passed", "failed"), default="not-run")
+        action.set_defaults(handler=handle_agent)
+
+
+def handle_closeout(args: argparse.Namespace) -> None:
+    scripts = Path(__file__).resolve().parent.parent / "closeout" / "scripts"
+    if args.action == "audit":
+        command = [sys.executable, str(scripts / "audit_inventory.py"),
+                   "--project", args.project, "--format", args.format]
+    else:
+        command = [sys.executable, str(scripts / "run_evals.py"), "validate"]
+    subprocess.run(command, check=True)
+
+
+def add_closeout_commands(subparsers: argparse._SubParsersAction) -> None:
+    closeout = subparsers.add_parser("closeout", help="Run bundled evidence-driven Closeout checks.")
+    actions = closeout.add_subparsers(dest="action", required=True)
+    audit = actions.add_parser("audit", help="Read-only six-plane project inventory.")
+    audit.add_argument("--project", default=".")
+    add_output(audit, ["markdown", "json"])
+    audit.set_defaults(handler=handle_closeout)
+    evals = actions.add_parser("evals", help="Validate bundled Closeout evaluation suite.")
+    evals.set_defaults(handler=handle_closeout)
+
+
+def handle_create(args: argparse.Namespace) -> None:
+    result = skill_creation.run(args)
+    if args.format == "json":
+        json_print(result)
+    else:
+        skill_creation.emit_markdown(result)
+
+
+def add_create_commands(subparsers: argparse._SubParsersAction) -> None:
+    create = subparsers.add_parser("create", help="Plan Skill Development Kit creation without running it.")
+    actions = create.add_subparsers(dest="action", required=True)
+    plan = actions.add_parser("plan", help="Select a skill-creation method and verify a local kit source.")
+    skill_creation.add_arguments(plan)
+    plan.set_defaults(handler=handle_create)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Manage, discover, recommend, orchestrate, refresh markets, and monitor agent skills.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -784,6 +848,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     add_orchestrate_commands(subparsers)
     add_monitor_commands(subparsers)
     add_market_commands(subparsers)
+    add_agent_commands(subparsers)
+    add_closeout_commands(subparsers)
+    add_create_commands(subparsers)
     return parser.parse_args(normalize_legacy_args(list(sys.argv[1:] if argv is None else argv)))
 
 
