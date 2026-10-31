@@ -112,7 +112,9 @@ Use Skill Atlas to inspect how Codex, Claude Code, OpenCode, and DeepSeek Harnes
 
 The agent-led workflow discovers tool instruction entries, reuses project rules and state, and adds an index when multiple projects need routing. It records progress and file ownership while preserving history and backups. Model and agent choices follow task requirements and actual capabilities.
 
-Reports distinguish **configured files**, **verified loading**, and **verified handoff**. This is not an extra CLI command or a live chat synchronization service. See the [collaboration guide](docs/cross-agent-collaboration.md) for the procedure.
+Reports distinguish **configured files**, **verified loading**, and **verified handoff**. Rule-entry setup is agent-led; the task continuity CLI below is separate and does not synchronize live chats. See the [collaboration guide](docs/cross-agent-collaboration.md) for the procedure.
+
+The guide also covers WorkBuddy rule-entry discovery, project-guidance precedence, account scope, and runtime verification against the installed version.
 
 ## Recommendation Modes
 
@@ -300,10 +302,10 @@ See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, dis
 
 ## Status
 
-Skill Atlas is currently `0.6.4-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.6.5-beta`. Interfaces and platform adapters may change before the stable release.
 
 
-## Integrated Closeout and multi-agent handoff (development branch)
+## Integrated Closeout and multi-agent handoff
 
 The original `discover`, `recommend`, `orchestrate`, `market`, `manage`, and `monitor`
 commands remain in place. Skill Atlas now bundles the original Closeout package at
