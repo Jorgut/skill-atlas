@@ -50,6 +50,8 @@ After configuration, use the verification levels below. Ask the receiving WorkBu
 
 For current product behavior, consult the installed implementation and [WorkBuddy project documentation](https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Project); do not apply CodeBuddy CLI/IDE instructions to WorkBuddy solely because the products share a name or file convention.
 
+For new rule/state files, adapt the [public collaboration templates](../templates/README.md). They provide three roles without containing live user records; reuse existing project files instead when available.
+
 ## Plan and apply a narrow integration
 
 For a setup request, report the discovered entry paths, proposed shared source, project-state paths, exact additions, backup location, and rollback method. Respect explicit authorization already provided in the session; ask only for unresolved choices or required permissions. An audit or recommendation alone does not authorize writes.
