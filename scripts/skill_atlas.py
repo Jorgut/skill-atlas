@@ -15,6 +15,7 @@ from typing import Any
 import audit_skills
 import agent_handoff
 import handoff_advisor
+import feedback_loop
 import skill_creation
 import component_libraries
 import competitor_monitor
@@ -860,6 +861,29 @@ def add_create_commands(subparsers: argparse._SubParsersAction) -> None:
     plan.set_defaults(handler=handle_create)
 
 
+def handle_feedback(args: argparse.Namespace) -> None:
+    try:
+        result = feedback_loop.run(args)
+    except (feedback_loop.FeedbackError, agent_handoff.HandoffError) as exc:
+        print(f"Skill Atlas feedback refused: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    if args.format == "json":
+        json_print(result)
+    else:
+        print(f"# Skill Atlas feedback\n\n- status: {result['status']}")
+        if result.get("report"):
+            print(f"- title: {result['report']['title']}")
+        if result.get("issue_url"):
+            print(f"- issue: {result['issue_url']}")
+
+
+def add_feedback_commands(subparsers: argparse._SubParsersAction) -> None:
+    feedback = subparsers.add_parser("feedback", help="Detect and report issues with permission gates.")
+    feedback_loop.add_arguments(feedback)
+    for action in feedback._subparsers._group_actions[0].choices.values():
+        action.set_defaults(handler=handle_feedback)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Manage, discover, recommend, orchestrate, refresh markets, and monitor agent skills.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -872,6 +896,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     add_market_commands(subparsers)
     add_agent_commands(subparsers)
     add_handoff_advice_command(subparsers)
+    add_feedback_commands(subparsers)
     add_closeout_commands(subparsers)
     add_create_commands(subparsers)
     return parser.parse_args(normalize_legacy_args(list(sys.argv[1:] if argv is None else argv)))

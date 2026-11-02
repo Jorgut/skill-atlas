@@ -423,3 +423,21 @@ python3 scripts/skill_atlas.py handoff advise --project . --task issue-10 \
 See [Model-Aware Handoff](docs/model-aware-handoff.md) and the
 [example registry](examples/model-agent-profiles.example.json). Existing
 `handoff --project ...`, `checkpoint`, and `resume` commands remain unchanged.
+
+
+## Feedback Loop
+
+Issue feedback is private by default. A checkpoint mismatch detector
+prepares a sanitized local report. Users can preview proposed GitHub Issues
+and submit them with explicit authorization after duplicate checking.
+
+Usage:
+- python3 scripts/skill_atlas.py feedback detect --project . --task issue-10
+- python3 scripts/skill_atlas.py feedback prepare --title "Agent handoff lost state" --summary "Checkpoint mismatch" --category handoff --output /tmp/atlas-feedback.json
+- python3 scripts/skill_atlas.py feedback submit --file /tmp/atlas-feedback.json
+- After reviewing, set GITHUB_TOKEN and add --confirm to submit.
+
+A separate CI-only reporter handles confirmed integration-test failures
+on the main branch with minimal metadata. Community installations do not
+send telemetry or automatically upload reports.
+See docs/feedback-loop.md.
