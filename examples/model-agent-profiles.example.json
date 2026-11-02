@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "models": [
+    {
+      "id": "EXAMPLE-model-code",
+      "capabilities": [
+        "code",
+        "writing"
+      ],
+      "capability_evidence": "Replace with a reviewed benchmark or official capability source",
+      "access_status": "unknown"
+    },
+    {
+      "id": "EXAMPLE-model-vision",
+      "capabilities": [
+        "visual-understanding",
+        "image-generation"
+      ],
+      "capability_evidence": "Replace with an inspectable provider source",
+      "access_status": "unknown"
+    }
+  ],
+  "agents": [
+    {
+      "id": "EXAMPLE-agent-repo",
+      "supported_models": [
+        "EXAMPLE-model-code"
+      ],
+      "tools": [
+        "filesystem",
+        "terminal",
+        "git"
+      ],
+      "access_status": "unknown"
+    },
+    {
+      "id": "EXAMPLE-agent-visual",
+      "supported_models": [
+        "EXAMPLE-model-vision"
+      ],
+      "tools": [
+        "image-input",
+        "image-generation"
+      ],
+      "access_status": "unknown"
+    }
+  ]
+}
