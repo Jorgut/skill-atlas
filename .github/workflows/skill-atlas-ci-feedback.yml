@@ -1,0 +1,43 @@
+name: Skill Atlas CI failure feedback
+
+on:
+  workflow_run:
+    workflows: ["Skill Atlas integration tests"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  report:
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == 'Jorgut/skill-atlas'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Prepare safe report with no logs
+        env:
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          python scripts/skill_atlas.py feedback prepare \
+            --title "Integration tests failed on main" \
+            --summary "Trusted integration tests failed. See ${RUN_URL}" \
+            --category ci-failure --source-project skill-atlas \
+            --output /tmp/skill-atlas-ci-feedback.json
+      - name: Submit with repository-scoped write permission
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SKILL_ATLAS_TEAM_AUTOREPORT: "1"
+        run: |
+          python scripts/skill_atlas.py feedback submit \
+            --file /tmp/skill-atlas-ci-feedback.json --team-auto

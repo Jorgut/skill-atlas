@@ -468,3 +468,14 @@ access, recent performance, API costs or a permanent model ranking.
 An evidence-backed recommendation is only a suggestion; execution requires
 separate approval and currently supported tools. Read
 `docs/model-aware-handoff.md` for the contract.
+
+
+## Feedback Loop
+
+When a user reports a Skill Atlas failure, prepare a sanitized local
+Issue draft and preview it before seeking write permission. Manual
+GitHub submission requires explicit user authorization. The only
+automatic exception is the scoped, opt-in CI failure reporting workflow
+for the Skill Atlas repository itself. Do not upload project files,
+credentials, logs, or private conversation histories. See
+docs/feedback-loop.md.
