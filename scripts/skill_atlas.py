@@ -14,6 +14,7 @@ from typing import Any
 
 import audit_skills
 import agent_handoff
+import handoff_advisor
 import skill_creation
 import component_libraries
 import competitor_monitor
@@ -563,6 +564,8 @@ def handle_orchestrate(args: argparse.Namespace) -> None:
 def normalize_legacy_args(argv: list[str]) -> list[str]:
     if not argv:
         return argv
+    if argv[:2] == ["handoff", "advise"]:
+        return ["handoff-advise", *argv[2:]]
     command = argv[0]
     actions = {
         "manage": MANAGE_ACTIONS,
@@ -786,6 +789,25 @@ def handle_agent(args: argparse.Namespace) -> None:
         agent_handoff.emit_markdown(result)
 
 
+def handle_handoff_advice(args: argparse.Namespace) -> None:
+    try:
+        result = handoff_advisor.advise(args)
+    except (agent_handoff.HandoffError, handoff_advisor.AdviceError) as exc:
+        print(f"Model-aware handoff refused: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    if args.format == "json":
+        json_print(result)
+    else:
+        handoff_advisor.emit_markdown(result)
+
+
+def add_handoff_advice_command(subparsers: argparse._SubParsersAction) -> None:
+    adviser = subparsers.add_parser("handoff-advise",
+        help="Read-only Model-Aware Handoff (also: handoff advise).")
+    handoff_advisor.add_arguments(adviser)
+    adviser.set_defaults(handler=handle_handoff_advice)
+
+
 def add_agent_commands(subparsers: argparse._SubParsersAction) -> None:
     for name in ("checkpoint", "handoff", "resume"):
         action = subparsers.add_parser(name, help=f"{name.title()} an agent task using local Git evidence.")
@@ -849,6 +871,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     add_monitor_commands(subparsers)
     add_market_commands(subparsers)
     add_agent_commands(subparsers)
+    add_handoff_advice_command(subparsers)
     add_closeout_commands(subparsers)
     add_create_commands(subparsers)
     return parser.parse_args(normalize_legacy_args(list(sys.argv[1:] if argv is None else argv)))

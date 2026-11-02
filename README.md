@@ -400,3 +400,22 @@ handoff, and read-only resume scripts when authorized.
 Read [Kimi Code support and verification](docs/kimi-code.md) for platform
 instructions, environment overrides, and the distinction between configured,
 loaded, and handoff-verified states.
+
+
+## Model-Aware Handoff (Stage 1)
+
+Use the read-only `handoff advise` command to examine the saved task checkpoint,
+required tools, and a project-scoped, reviewed model/agent registry before
+choosing a successor. The command never switches models or checks billing.
+If measured evidence is missing, it returns a **provisional shortlist**, not
+an invented model leaderboard.
+
+```bash
+python3 scripts/skill_atlas.py handoff advise --project . --task issue-10
+python3 scripts/skill_atlas.py handoff advise --project . --task issue-10 \
+  --task-type code --profiles /path/to/model-agent-profiles.json --format json
+```
+
+See [Model-Aware Handoff](docs/model-aware-handoff.md) and the
+[example registry](examples/model-agent-profiles.example.json). Existing
+`handoff --project ...`, `checkpoint`, and `resume` commands remain unchanged.

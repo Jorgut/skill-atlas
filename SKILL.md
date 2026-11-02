@@ -452,3 +452,17 @@ See [docs/kimi-code.md](docs/kimi-code.md). Validate Kimi's own `AGENTS.md`
 loading, version, skill catalog, and `checkpoint/handoff/resume` on a real
 disposable repository before claiming live platform support. Its documented
 hooks, `kimi -p`, and ACP do not establish automatic rate-limit failover.
+
+
+## Model-Aware Handoff recommendation
+
+For requests to select a model or Agent before passing an existing task,
+use the read-only `handoff advise` command with the project root, task ID,
+and a reviewed local Model/Agent registry. First inspect the saved task
+`next_action` and actual Git status. Distinguish declared capabilities from
+measured outcomes and live provider availability. Do not fabricate provider
+access, recent performance, API costs or a permanent model ranking.
+
+An evidence-backed recommendation is only a suggestion; execution requires
+separate approval and currently supported tools. Read
+`docs/model-aware-handoff.md` for the contract.

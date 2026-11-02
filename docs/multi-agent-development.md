@@ -85,3 +85,17 @@ stream output, and ACP. Stage 1 includes a Kimi load/handoff smoke test
 on a disposable repository. Stage 2 must independently verify
 provider authentication, quota/error handling, and cancellation before
 adding any automatic dispatch. See [Kimi Code integration](kimi-code.md).
+
+
+## Stage 1 addition: Model-Aware Handoff
+
+Before transferring an existing project task, run the optional read-only
+`handoff advise` workflow. It reads the Git task checkpoint and a reviewed
+model/agent registry, applies capability and tool-compatibility gates,
+reports comparable evidence, and provides a provisional shortlist when
+model success, cost or risk data is missing.
+
+See [Model-Aware Handoff](model-aware-handoff.md). No provider is dispatched
+and no live subscription or rate-limit state is inferred. The Stage 2
+orchestrator can consume this output only after adding verified provider
+adapters and a user-approved execution policy.
