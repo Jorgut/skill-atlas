@@ -2,6 +2,20 @@
 
 The unified command tree is documented in [SKILL.md](../SKILL.md). Use these lower-level helpers for automation, custom output formats, or debugging. They preserve the same permission and review requirements.
 
+For executed public discovery use the unified CLI, not the offline component helpers:
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py discover similar pdf --search-mode web --format json
+python3 <skill-root>/scripts/skill_atlas.py recommend tool blender --search-mode hybrid
+python3 <skill-root>/scripts/skill_atlas.py market refresh --category pdf --search-mode web
+```
+
+See [external search](external-search.md) for provider/authentication options,
+status contracts, bounded requests, and the review boundary. Existing
+`--mode quick|balanced|benchmark` remains research depth; `--search-mode`
+controls local/network scope. Lower-level discovery/recommendation helpers
+below remain offline unless their existing command explicitly checks upstream.
+
 Markdown summary:
 
 ```bash
