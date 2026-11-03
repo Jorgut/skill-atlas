@@ -120,6 +120,29 @@ The guide also covers WorkBuddy rule-entry discovery, project-guidance precedenc
 
 Start with the [three public collaboration templates](templates/README.md): global principles, project rules, and project context. Copy only what is missing, fill verified project facts, and keep private records in their intended local or private destination. The templates include first-principles reasoning and UI information hierarchy; they do not install rules automatically.
 
+## Real public search
+
+The unified CLI supports `--search-mode local|web|hybrid`. Existing commands
+remain offline by default. Use `web` for external search without scanning
+local Skills, or `hybrid` to include both:
+
+```bash
+python3 scripts/skill_atlas.py discover similar pdf --search-mode web
+python3 scripts/skill_atlas.py recommend tool "blender" --search-mode hybrid --format json
+python3 scripts/skill_atlas.py market refresh --category pdf --search-mode web
+```
+
+Default external sources are GitHub repository search, official Skills
+repository paths and the official MCP Registry. Optional `--provider github-code`
+uses GitHub code search; `--provider web` uses the Brave web index with
+`BRAVE_SEARCH_API_KEY` configured. Missing access, failures and rate limits
+are reported explicitly. Results include classification evidence, timestamps,
+URLs, deduplicated provenance and transparent discovery scores. This is bounded
+search, not an exhaustive web crawl or an installation/security approval.
+Search results never refresh the reviewed market cache automatically.
+
+See [external search modes, providers, evidence and review](docs/external-search.md).
+
 ## Recommendation Modes
 
 `recommend` and `orchestrate` accept the same `--mode` option:
@@ -127,12 +150,12 @@ Start with the [three public collaboration templates](templates/README.md): glob
 | Mode | Behavior | Best for |
 | --- | --- | --- |
 | `quick` | Uses installed skills first and creates public-skill searches only for missing capabilities | Fast local planning |
-| `balanced` | Default. Compares every required capability against three public candidates, even when a local match exists | Normal product decisions |
+| `balanced` | Default. Plans comparison against three public candidates per capability, even when a local match exists | Normal product decisions |
 | `benchmark` | Expands every capability to eight candidates and deeper eval, maintenance, license, compatibility, and security queries | High-stakes selection |
 
 Local and public candidates use one 100-point rubric: task fit 30, workflow quality 20, eval evidence 15, maintenance 10, source and license 10, compatibility 10, and safety 5.
 
-The deterministic CLI creates an external research worklist; it does not browse the web by itself. A `provisional` result is an unverified candidate set, not an adoption decision: the Agent must execute those searches, inspect sources, and score the candidates before claiming the comparison is complete. Narrow media tools require explicit production intent, and overlapping presentation generators are reduced to one primary plus named alternatives.
+Research depth and network scope are independent: default `local` creates a worklist; `--search-mode web|hybrid` executes selected public APIs. A `provisional` result is an unverified candidate set, not an adoption decision: the Agent must execute those searches, inspect sources, and score the candidates before claiming the comparison is complete. Narrow media tools require explicit production intent, and overlapping presentation generators are reduced to one primary plus named alternatives.
 
 Every `recommend` and `orchestrate` invocation checks the reviewed market snapshot. Default TTLs are seven days for `quick`, 24 hours for `balanced`, and zero for `benchmark`. `benchmark` and `--refresh` always require current research.
 
@@ -144,10 +167,10 @@ Use this as a lightweight startup check; it never accesses the network:
 python3 scripts/skill_atlas.py market status
 ```
 
-When the snapshot is missing or stale, generate a category-specific research packet:
+When the snapshot is missing or stale, execute category-specific discovery (omit `--search-mode web` to generate only an offline packet):
 
 ```bash
-python3 scripts/skill_atlas.py market refresh --category ui-ux
+python3 scripts/skill_atlas.py market refresh --category ui-ux --search-mode web
 ```
 
 The active Agent must then research and review the candidates. Completed results require at least one marketplace source, one official or GitHub source, and one maintained community source:
