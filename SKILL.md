@@ -7,7 +7,7 @@ description: "Manage agent skills across platforms: inventory, duplicates, upstr
 
 Use this cross-platform skill manager to inventory an agent-skill ecosystem, track updates, discover alternatives, recommend skill stacks, and orchestrate skills with models and software connectors. It is read-only by default.
 
-Treat `scripts/audit_skills.py` as the primary, platform-neutral entry point. Use `scripts/opencode_skill_manager.py` only as a compatibility helper when the user explicitly asks for the older OpenCode upstream/evolution workflow.
+Use `scripts/skill_atlas.py` as the unified entry point, including executed public search. Treat `scripts/audit_skills.py` as the platform-neutral local inventory helper. Use `scripts/opencode_skill_manager.py` only as a compatibility helper when the user explicitly asks for the older OpenCode upstream/evolution workflow.
 
 Do not assume that a published user's machine has any particular platform, directory, skill count, duplicate, or symlink layout. Default roots are discovery conventions only. Treat every inventory result as runtime evidence, and accept repeated `--root` arguments for custom platforms or canonical stores.
 
@@ -20,6 +20,20 @@ Choose the workflow from the request:
 - recurring competitor comparison with historical differences: run monitor
 - cross-agent rules, project context, or handoff setup: read the cross-agent context workflow below
 - a downloaded or proposed third-party skill: run strict security review
+
+## Executed Public Search
+
+For requests to find public Skills, MCP servers, AI/software tools or current alternatives, read [docs/external-search.md](docs/external-search.md) and run the unified CLI with `--search-mode hybrid` (or `web` to skip local inventory). CLI defaults remain `local` for backward compatibility. Do not answer a public-search request with only local scanning or generated query suggestions.
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py discover similar pdf --search-mode web
+python3 <skill-root>/scripts/skill_atlas.py recommend tool "blender" --search-mode hybrid
+python3 <skill-root>/scripts/skill_atlas.py market refresh --category pdf --search-mode web
+```
+
+Use concise public keywords. Do not send private project text, file contents or inventory. The default providers execute GitHub repository search, official Skills tree/path lookup and official MCP Registry name search. Add `--provider github-code` for code search or `--provider web` for the Brave web index when the required API credentials are configured. Repeated provider flags select the exact source set. Never claim a missing provider ran, a linked website was inspected, or bounded API results cover the entire web. Keep per-source execution status, timestamp, limitations and citation URLs visible; failed/limited searches do not prove there are no candidates.
+
+External hits are typed metadata candidates, not reviewed installation recommendations. Preserve their provenance, classification basis and discovery-priority score, and complete the risk checklist/content review before adoption. No search hit automatically enters orchestration or the reviewed market cache. `--mode quick|balanced|benchmark` controls comparison planning depth, independently of network scope. Use additional authorized browsing when the bounded API coverage is insufficient, recording what actually executed.
 
 ## Cross-Agent Context and Handoff
 
@@ -195,7 +209,7 @@ On platforms that expose skills as slash commands, invoke the platform's command
 ```bash
 python3 <skill-root>/scripts/skill_atlas.py recommend product \
   "Describe the task, product, model question, or software workflow" \
-  --mode balanced
+  --mode balanced --search-mode hybrid
 ```
 
 Add one or more `--root /path/to/skills` options when the user's platform stores skills elsewhere.
@@ -204,7 +218,7 @@ Add one or more `--root /path/to/skills` options when the user's platform stores
 - `balanced`: inspect local skills and create an external comparison plan for every required capability; target three public candidates per capability
 - `benchmark`: perform the broadest comparison planning for every capability; target eight public candidates with deeper queries
 
-The deterministic CLI does not browse the internet. In `balanced` and `benchmark`, treat `external_comparison_plan` as work for the active Agent: search current public sources, inspect the candidate code, and score local and external candidates with the same 100-point rubric. Keep the recommendation status `provisional` until that work is complete. `provisional` means candidates are unverified and must not be presented as an adoption decision.
+With `--search-mode web|hybrid`, the unified CLI executes the selected search APIs and reports actual evidence under `external_search`. In default `local` scope it only plans. In `balanced` and `benchmark`, the remaining `external_comparison_plan` is work for the active Agent: search current public sources, inspect the candidate code, and score local and external candidates with the same 100-point rubric. Keep the recommendation status `provisional` until that work is complete. `provisional` means candidates are unverified and must not be presented as an adoption decision.
 
 Every unified `recommend` or `orchestrate` invocation checks the reviewed public-market snapshot under `~/.local/share/skill-atlas`. Default freshness windows are 168 hours for `quick`, 24 hours for `balanced`, and zero for `benchmark`. `benchmark` and `--refresh` always set `market_refresh_required`. Skill Atlas cannot assume every Agent platform supports startup hooks; a platform startup task may run `market status`, but it must not perform a full market crawl automatically.
 
@@ -239,7 +253,7 @@ Reviewed candidates may include optional `roles`, `keywords`, and `platforms`. R
 
 Use `market status` as the lightweight startup check. It reads local metadata only and returns `missing`, `fresh`, or `stale` with `researched_at`, age, TTL, source coverage, and candidate count.
 
-Use `market refresh` to create a research packet. A completed market snapshot must include at least one `marketplace`, one `official-or-github`, and one `community` source. The command does not browse by itself. After the Agent finishes current research and security review, save reviewed JSON with `market refresh --results FILE`.
+Use `market refresh --search-mode web` for executed public discovery; default `market refresh` still creates an offline research packet. A completed reviewed market snapshot must include at least one `marketplace`, one `official-or-github`, and one `community` source. Search-only results never renew reviewed freshness. After the Agent finishes current research and security review, save reviewed JSON with `market refresh --results FILE`.
 
 Do not claim a cache is refreshed merely because a packet was generated. Only validated results produce a `completed` snapshot.
 
@@ -247,13 +261,15 @@ Do not claim a cache is refreshed merely because a packet was generated. Only va
 
 Use this workflow when the user wants to compare local skills with public alternatives or find stronger versions of each skill category.
 
-1. Generate focused discovery briefs:
+1. Execute focused public search and retain actual evidence:
 
 ```bash
-python3 <skill-root>/scripts/discovery_brief.py --focus ux --limit 20
+python3 <skill-root>/scripts/skill_atlas.py discover similar ux --search-mode hybrid --web-limit 20
 ```
 
-2. Search the web for each relevant brief. Prioritize primary or inspectable sources:
+The older `discovery_brief.py` only generates offline briefs; it does not search.
+
+2. Inspect returned candidates and expand with additional executed searches where coverage is insufficient. Prioritize primary or inspectable sources:
 
 - GitHub repositories with visible `SKILL.md`
 - official skill marketplaces/directories such as SkillsMP, SkillMD, Playbooks, and ClawHub
