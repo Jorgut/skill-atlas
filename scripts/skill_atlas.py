@@ -20,6 +20,7 @@ import skill_creation
 import component_libraries
 import competitor_monitor
 import discovery_brief
+import external_search
 import install_skill_atlas
 import market_cache
 import recommend_skills
@@ -166,7 +167,7 @@ def discovery_records(args: argparse.Namespace) -> list[dict[str, Any]]:
     return [asdict(record) for record in records_for(args)]
 
 
-def discovery_payload(args: argparse.Namespace) -> dict[str, Any]:
+def local_discovery_payload(args: argparse.Namespace) -> dict[str, Any]:
     if args.action == "gaps":
         result = recommend_skills.build_recommendation(
             args.query, discovery_records(args), min(args.limit, 5)
@@ -193,10 +194,23 @@ def discovery_payload(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def discovery_payload(args: argparse.Namespace) -> dict[str, Any]:
+    scope = getattr(args, "search_mode", "local")
+    if scope == "web":
+        payload = {"mode": "external-discovery", "focus": args.query, "briefs": []}
+    else:
+        payload = local_discovery_payload(args)
+    payload.update(search_mode=scope, network_attempted=False, local_inventory_scanned=scope != "web")
+    if scope != "local":
+        payload["external_search"] = external_search.from_args(args, args.query)
+        payload["network_attempted"] = payload["external_search"]["network_attempted"]
+    return payload
+
+
 def emit_discovery_markdown(payload: dict[str, Any]) -> None:
     print("# Skill Atlas Discovery")
     print()
-    print(f"- mode: {payload['mode']}")
+    print(f"- mode: {payload['mode']}; search scope: {payload['search_mode']}; network attempted: {payload['network_attempted']}")
     if payload.get("focus"):
         print(f"- focus: {payload['focus']}")
     print()
@@ -217,6 +231,8 @@ def emit_discovery_markdown(payload: dict[str, Any]) -> None:
     if payload.get("rule"):
         print()
         print(f"Safety: {payload['rule']}")
+    if payload.get("external_search"):
+        external_search.emit_markdown(payload["external_search"])
 
 
 def handle_discover(args: argparse.Namespace) -> None:
@@ -351,6 +367,8 @@ def emit_market_markdown(payload: dict[str, Any]) -> None:
             print(f"- query: `{query}`")
         print()
         print(packet["next_step"])
+    for report in payload.get("searches", []):
+        external_search.emit_markdown(report)
 
 
 def handle_market(args: argparse.Namespace) -> None:
@@ -360,6 +378,8 @@ def handle_market(args: argparse.Namespace) -> None:
             freshness = cache.status(args.ttl_hours)
             payload = {"action": "status", "status": freshness["status"], "freshness": freshness}
         elif args.results:
+            if getattr(args, "search_mode", "local") != "local":
+                raise market_cache.MarketCacheError("Use --results for reviewed import OR --search-mode for discovery, not both.")
             results = json.loads(Path(args.results).read_text(encoding="utf-8"))
             cache.save(results)
             freshness = cache.status(args.ttl_hours)
@@ -374,6 +394,24 @@ def handle_market(args: argparse.Namespace) -> None:
     except (OSError, json.JSONDecodeError, market_cache.MarketCacheError) as exc:
         print(f"Market refresh refused: {exc}", file=sys.stderr)
         raise SystemExit(2) from None
+    scope = getattr(args, "search_mode", "local")
+    payload.update(search_mode=scope, network_attempted=False)
+    if args.action == "refresh" and not args.results and scope != "local":
+        if len(args.category) > 3:
+            print("Market search refused: at most three categories per invocation.", file=sys.stderr)
+            raise SystemExit(2)
+        # Preserve category boundaries: a multi-category AND query hides valid hits.
+        payload["searches"] = [external_search.from_args(args, category) for category in (args.category or ["agent skills"])]
+        payload["network_attempted"] = any(report["network_attempted"] for report in payload["searches"])
+        if any(report["candidates"] for report in payload["searches"]):
+            payload["status"] = "search-review-required"
+        elif all(report["status"] == "failed" for report in payload["searches"]):
+            payload["status"] = "search-failed"
+        elif any(report["status"] in {"failed", "partial"} for report in payload["searches"]):
+            payload["status"] = "search-incomplete"
+        else:
+            payload["status"] = "search-no-candidates"
+        payload["reviewed_cache_updated"] = False
     json_print(payload) if args.format == "json" else emit_market_markdown(payload)
 
 
@@ -383,7 +421,8 @@ def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
         request = f"Compare and select current AI models for: {request}"
     elif args.action == "tool":
         request = f"Find software integrations, APIs, plugins, MCP connectors, and skills for: {request}"
-    records = discovery_records(args)
+    scope = getattr(args, "search_mode", "local")
+    records = discovery_records(args) if scope != "web" else []
     result = recommend_skills.build_recommendation(
         request,
         records,
@@ -392,7 +431,7 @@ def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
     )
     component_roots = [Path(value) for value in getattr(args, "component_root", [])]
     try:
-        libraries = component_libraries.discover(component_roots)
+        libraries = component_libraries.discover(component_roots) if scope != "web" else []
     except (OSError, json.JSONDecodeError, component_libraries.ComponentLibraryError) as exc:
         print(f"Component-library scan refused: {exc}", file=sys.stderr)
         raise SystemExit(2) from None
@@ -431,7 +470,7 @@ def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
     )
     snapshot = None
     try:
-        snapshot = cache.load()
+        snapshot = cache.load() if scope != "web" else None
     except (OSError, json.JSONDecodeError, market_cache.MarketCacheError):
         pass
     market_matches = recommend_skills.match_market_candidates(
@@ -469,6 +508,14 @@ def recommendation_result(args: argparse.Namespace) -> dict[str, Any]:
                 ],
             }
         )
+    result.update(search_mode=scope, network_attempted=False, local_inventory_scanned=scope != "web")
+    if scope != "local":
+        # Send only the explicit user query, never the inventory or generated task prompt.
+        result["external_search"] = external_search.from_args(args, args.request)
+        result["network_attempted"] = result["external_search"]["network_attempted"]
+        result["external_candidates_review_required"] = True
+        if scope == "web":
+            result["recommendation_status"] = "external-review-required" if result["external_search"]["candidates"] else "no-reviewed-external-candidates"
     return result
 
 
@@ -543,7 +590,12 @@ def handle_orchestrate(args: argparse.Namespace) -> None:
     result = recommendation_result(args)
     if args.action == "validate":
         validation = validate_orchestration(result)
+        validation["search_mode"] = result["search_mode"]
+        if result.get("external_search"):
+            validation["external_search"] = result["external_search"]
         json_print(validation) if args.format == "json" else emit_validation_markdown(validation)
+        if args.format != "json" and result.get("external_search"):
+            external_search.emit_markdown(result["external_search"])
         return
     if args.action == "run":
         result["execution"] = {
@@ -633,6 +685,7 @@ def add_discover_commands(subparsers: argparse._SubParsersAction) -> None:
         add_roots(action)
         add_output(action, ["markdown", "json"])
         action.add_argument("--limit", type=int, default=20)
+        external_search.add_arguments(action)
         action.set_defaults(handler=handle_discover)
 
 
@@ -673,7 +726,7 @@ def add_recommend_commands(subparsers: argparse._SubParsersAction) -> None:
             "--mode",
             choices=recommend_skills.RESEARCH_MODES,
             default="balanced",
-            help="External research depth; balanced compares local and public candidates by default.",
+            help="Comparison planning depth; use --search-mode web/hybrid to execute external requests.",
         )
         action.add_argument("--refresh", action="store_true", help="Require current market research instead of accepting a fresh cache.")
         action.add_argument("--market-ttl-hours", type=int, help="Override the mode's market-cache TTL.")
@@ -684,6 +737,7 @@ def add_recommend_commands(subparsers: argparse._SubParsersAction) -> None:
             default=[],
             help="Explicit repository root or component-library.json to scan. May be repeated.",
         )
+        external_search.add_arguments(action)
         action.set_defaults(handler=handle_recommend)
 
 
@@ -704,7 +758,7 @@ def add_orchestrate_commands(subparsers: argparse._SubParsersAction) -> None:
             "--mode",
             choices=recommend_skills.RESEARCH_MODES,
             default="balanced",
-            help="External research depth; balanced compares local and public candidates by default.",
+            help="Comparison planning depth; use --search-mode web/hybrid to execute external requests.",
         )
         action.add_argument("--refresh", action="store_true", help="Require current market research instead of accepting a fresh cache.")
         action.add_argument("--market-ttl-hours", type=int, help="Override the mode's market-cache TTL.")
@@ -715,6 +769,7 @@ def add_orchestrate_commands(subparsers: argparse._SubParsersAction) -> None:
             default=[],
             help="Explicit repository root or component-library.json to scan. May be repeated.",
         )
+        external_search.add_arguments(action)
         action.set_defaults(handler=handle_orchestrate)
 
 
@@ -779,6 +834,7 @@ def add_market_commands(subparsers: argparse._SubParsersAction) -> None:
     refresh.add_argument("--ttl-hours", type=int, default=168)
     refresh.add_argument("--state-dir", default=default_state_dir())
     add_output(refresh, ["markdown", "json"])
+    external_search.add_arguments(refresh)
     refresh.set_defaults(handler=handle_market)
 
 

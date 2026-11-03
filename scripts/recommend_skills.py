@@ -795,9 +795,13 @@ def build_recommendation(
 
 
 def emit_markdown(result: dict[str, Any], include_orchestration: bool) -> None:
+    if result.get("external_search"):
+        import external_search
+        external_search.emit_markdown(result["external_search"])
     print("# Product Skill Recommendation")
     print()
     print(f"- Request: {result['product']}")
+    print(f"- Search scope: {result.get('search_mode', 'local')}; network attempted: {result.get('network_attempted', False)}")
     print(f"- Research mode: {result['research_mode']}")
     print(f"- Recommendation status: {result['recommendation_status']}")
     print()
