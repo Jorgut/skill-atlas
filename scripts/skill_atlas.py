@@ -17,6 +17,7 @@ import agent_environments
 import agent_handoff
 import agent_messages
 import handoff_advisor
+import project_roots
 import feedback_loop
 import skill_creation
 import component_libraries
@@ -902,6 +903,26 @@ def add_agents_commands(subparsers: argparse._SubParsersAction) -> None:
     scan.set_defaults(handler=handle_agents)
 
 
+def handle_projects(args: argparse.Namespace) -> None:
+    result = project_roots.run(args)
+    if args.format == "json":
+        json_print(result)
+    else:
+        project_roots.emit_markdown(result)
+
+
+def add_project_commands(subparsers: argparse._SubParsersAction) -> None:
+    projects = subparsers.add_parser(
+        "projects", help="Audit project roots and duplicated project docs without writing."
+    )
+    actions = projects.add_subparsers(dest="action", required=True)
+    audit = actions.add_parser(
+        "audit", help="Read-only audit of project roots, duplicate docs and nested copies."
+    )
+    project_roots.add_arguments(audit)
+    audit.set_defaults(handler=handle_projects)
+
+
 def handle_message(args: argparse.Namespace) -> None:
     try:
         result = agent_messages.run(args)
@@ -996,6 +1017,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     add_market_commands(subparsers)
     add_agent_commands(subparsers)
     add_agents_commands(subparsers)
+    add_project_commands(subparsers)
     add_message_commands(subparsers)
     add_handoff_advice_command(subparsers)
     add_feedback_commands(subparsers)

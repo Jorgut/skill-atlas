@@ -85,6 +85,29 @@ Review default local user skill roots:
 python3 <skill-root>/scripts/security_review_skills.py --format markdown
 ```
 
+## Local project root audit
+
+The unified CLI includes a read-only `projects audit` command for duplicated
+project copies and divergent project documents:
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py projects audit \
+  --project . --project /path/to/other-copy
+python3 <skill-root>/scripts/skill_atlas.py projects audit \
+  --root ~/Projects --depth 2 --format json
+```
+
+`--root` searches descendants only; the root itself is not reported (use
+`--project` for it). `--depth` limits discovery: direct children are depth 1,
+and the default is 2. The audit groups copies as confirmed (normalized git
+remote, compared case-insensitively) or probable (case-folded directory name),
+hashes the listed agent-facing project documents up to 256 KiB without printing
+their contents, and flags divergent documents and nested project roots. It never
+runs git (`.git/config` and `.git/HEAD` are parsed by hand), writes nothing, and
+makes no network calls. Recommendations are plans requiring user confirmation.
+See [Project Root and Duplicate Documentation Audit](project-root-audit.md) for
+identity rules, the hash cap, output contract, and limitations.
+
 ## Local agent environment scan
 
 The unified CLI includes a read-only `agents scan` command that reports which
