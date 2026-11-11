@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skill Atlas — 看清你的 Agent 实际看到了什么</title>
+  <meta name="description" content="关于本机已安装的编码 Agent、它们的规则与 Skill 根目录、Skill Atlas 副本以及已产生差异的项目副本的只读本地证据。一个 Skill，一条命令。">
+  <link rel="alternate" hreflang="en" href="https://jorgut.github.io/skill-atlas/">
+  <link rel="alternate" hreflang="zh-CN" href="https://jorgut.github.io/skill-atlas/zh-CN/">
+  <link rel="alternate" hreflang="ru" href="https://jorgut.github.io/skill-atlas/ru/">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到正文</a>
+
+  <header class="site">
+    <div class="wrap">
+      <a class="brand" href="../">Skill Atlas</a>
+      <nav aria-label="主导航">
+        <a href="#why">为什么</a>
+        <a href="#demo">演示</a>
+        <a href="#how">工作原理</a>
+        <a href="#refuses">边界</a>
+        <a href="#start">文档</a>
+        <a href="https://github.com/Jorgut/skill-atlas">GitHub</a>
+      </nav>
+      <div class="lang" aria-label="语言">
+        <a href="../" lang="en">English</a>
+        <a href="./" aria-current="page">简体中文</a>
+        <a href="../ru/" lang="ru">Русский</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap">
+      <section class="hero" aria-labelledby="hero-title">
+        <p class="eyebrow">Agent Skill 管理器 · 本地优先 · 默认只读</p>
+        <h1 id="hero-title">看清你的 Agent 实际看到了什么。</h1>
+        <p class="lede">
+          Skill Atlas 会报告你机器上存在哪些编码 Agent，每个 Agent 从何处加载规则与 Skill，
+          你本地的 Skill Atlas 副本是否彼此不一致，以及同一个项目是否在多个位置存在且文档已产生差异。
+          它是一个适用于 Codex、Claude Code、DeepSeek Harness、OpenCode、WorkBuddy、Kimi Code
+          和其他 Agent 工具的 Skill。
+        </p>
+        <div class="actions">
+          <a class="button primary" href="#install">用一条命令安装</a>
+          <a class="button" href="https://github.com/Jorgut/skill-atlas">GitHub 源代码</a>
+        </div>
+        <pre id="install"><code>npx skills add Jorgut/skill-atlas</code></pre>
+      </section>
+
+      <section id="why" aria-labelledby="why-title">
+        <h2 id="why-title">为什么会有它</h2>
+        <p class="section-note">Skill Atlas 源于一次具体的失败，而不是一份功能清单。</p>
+        <div class="grid two">
+          <div class="card">
+            <h3>版本标签掩盖了三个已合并的 PR</h3>
+            <p>源代码检出与 Agent 实际加载的副本之间相差三个已合并的 PR，
+              而安装的版本字符串看起来仍然是最新的。<code>agents scan</code> 会比较本地
+              Skill Atlas 副本并报告 <code>version_mismatch</code>，而不是信任标签。</p>
+          </div>
+          <div class="card">
+            <h3>Agent 各自保留了自己的项目副本</h3>
+            <p>同一个项目存在于多个目录中，每个目录由不同的工具打开。
+              <code>projects audit</code> 按规范化后的 git remote（已确认）或大小写折叠的目录名（可能）
+              对疑似重复的副本进行分组。</p>
+          </div>
+          <div class="card">
+            <h3>副本中的文档已经产生差异</h3>
+            <p><code>AGENTS.md</code>、<code>CLAUDE.md</code> 和状态文件在不同副本之间不一致，
+              因此 Agent 所认为的内容取决于它打开了哪个检出。审计会计算这些文档的哈希，
+              并报告哪些副本存在差异，而不打印其内容。</p>
+          </div>
+          <div class="card">
+            <h3>已配置的文件不等于已加载的规则</h3>
+            <p>磁盘上存在某个规则文件，并不能证明 Agent 读取了它。证据阶梯止步于
+              <code>configured</code>；从不断言运行时加载，且已配置、已加载与交接已验证
+              始终是彼此独立的声明。</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="demo" aria-labelledby="demo-title">
+        <h2 id="demo-title">30 秒演示</h2>
+        <p class="section-note">来自真实运行的截断输出。工具数量、路径和哈希因机器而异。</p>
+        <div class="demo">
+          <h3>存在哪些 Agent 工具和 Skill Atlas 副本</h3>
+          <pre><code>python3 scripts/skill_atlas.py agents scan
+
+## Summary
+- tools detected: 12
+- tools configured: 4
+- skill atlas copies: 2
+- version mismatch: false</code></pre>
+
+          <h3>项目副本在哪些地方产生了差异</h3>
+          <pre><code>python3 scripts/skill_atlas.py projects audit \
+  --project ~/repos/widgets --project ~/worktrees/widgets-review
+
+## Duplicate groups
+### `git-remote:github.com/example/widgets` (git-remote)
+- divergent docs:
+  - AGENTS.md (2 distinct hashes)
+- canonical candidate: `/home/you/repos/widgets`
+- requires user confirmation: true</code></pre>
+
+          <h3>留下带回执的交接消息</h3>
+          <pre><code>python3 scripts/skill_atlas.py message send --project . --task issue-28 \
+  --from Codex --to "Claude Code" --summary "Review the camera diff" \
+  --requires-approval
+
+# Agent message: queued
+- state: queued
+- approval: pending
+- note: Local file transport only; the receiving agent has not been notified</code></pre>
+        </div>
+      </section>
+
+      <section id="how" aria-labelledby="how-title">
+        <h2 id="how-title">工作原理</h2>
+        <p class="section-note">三张图说明了整个模型。没有第二个事实源，没有隐藏状态。</p>
+
+        <figure>
+          <img src="../assets/roles.svg" alt="示意图：一个上游 Git 仓库供给 main 上的源代码检出、每个任务的 worktree（工作树）、只读安装副本、拉取请求流程和冻结的归档。">
+          <figcaption><strong>唯一事实源，四种角色。</strong>开发在每个任务的 worktree（工作树）中进行；
+            安装副本是只读的；被替换的副本会冻结为证据。
+            <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/development-layout.md">阅读布局指南</a>。</figcaption>
+        </figure>
+
+        <figure>
+          <img src="../assets/message-flow.svg" alt="示意图：紧凑的信封从一个 Agent 经由本地邮箱传递到接收方，带有仅可追加的回执，并在完成前经过人工审批门。">
+          <figcaption><strong>交接靠回执，而不是假设。</strong>消息携带摘要和简短的证据指针。
+            被标记为需要审批的消息，在有人批准之前不能完成。
+            <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md">阅读消息指南</a>。</figcaption>
+        </figure>
+
+        <figure>
+          <img src="../assets/evidence-ladder.svg" alt="示意图：三个证据等级，未检测、已检测和已配置，其中运行时加载标注为不作断言。">
+          <figcaption><strong>证据止于文件所能证明的范围。</strong>扫描只报告文件证据；
+            从不断言运行时加载，候选路径无法达到 <code>configured</code>。
+            <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-environments.md">阅读扫描指南</a>。</figcaption>
+        </figure>
+      </section>
+
+      <section id="refuses" aria-labelledby="refuses-title">
+        <h2 id="refuses-title">它做什么，不做什么</h2>
+        <p class="section-note">边界是产品的一部分，而不是免责声明。</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">它会报告和规划</th><th scope="col">它拒绝做的事</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>哪些 Agent 工具会在本地留下证据，以及它们指向哪些规则根目录和 Skill 根目录</td><td class="refuse">默认情况下经由网络发送任何内容；公开搜索仅在显式选项和已配置的访问权限下运行</td></tr>
+              <tr><td>Skill Atlas 副本位于何处，以及它们的版本、别名和不匹配标记</td><td class="refuse">信任版本标签，或声称 Agent 加载了它并未加载的副本</td></tr>
+              <tr><td>项目副本位于何处、哪些看起来重复，以及哪些文档存在差异</td><td class="refuse">打印、存储或比较这些项目文档的内容</td></tr>
+              <tr><td>Skill 清单、重复项、更新与整合计划</td><td class="refuse">执行 Agent 工具、运行第三方代码或启动另一个 Agent</td></tr>
+              <tr><td>基于共享评分标准给出的 Skill、模型和工具推荐</td><td class="refuse">编造基准测试、价格、可用性或永久性的模型排名</td></tr>
+              <tr><td>可选的本地交接消息，带有回执和人工审批门</td><td class="refuse">自动移动、合并、归档或删除文件</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="start" aria-labelledby="start-title">
+        <h2 id="start-title">从这里开始</h2>
+        <p class="section-note">详细文档位于仓库中；每个页面都会说明自身的限制。</p>
+        <div class="links">
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/README.md"><strong>README</strong><span>功能、安装、工作流</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/development-layout.md"><strong>安装与开发布局</strong><span>源代码、worktree（工作树）、安装、归档</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-environments.md"><strong>本地 Agent 环境扫描</strong><span>证据等级与限制</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/project-root-audit.md"><strong>项目根目录审计</strong><span>重复副本与存在差异的文档</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md"><strong>Agent 交接消息</strong><span>信封、回执、审批</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/cli-reference.md"><strong>CLI 参考</strong><span>所有命令与标志</span></a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Skill Atlas · 本地优先，默认只读。</span>
+      <span><a href="https://github.com/Jorgut/skill-atlas">GitHub</a> · <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/GETTING_STARTED.zh-CN.md">新手教程</a> · 无跟踪器、无 Cookie</span>
+    </div>
+  </footer>
+</body>
+</html>
