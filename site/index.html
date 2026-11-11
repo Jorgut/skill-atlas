@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skill Atlas — know what your agents actually see</title>
+  <meta name="description" content="Read-only local evidence about installed coding agents, their rule and skill roots, Skill Atlas copies, and drifted project copies. One skill, one command.">
+  <link rel="alternate" hreflang="en" href="https://jorgut.github.io/skill-atlas/">
+  <link rel="alternate" hreflang="zh-CN" href="https://jorgut.github.io/skill-atlas/zh-CN/">
+  <link rel="alternate" hreflang="ru" href="https://jorgut.github.io/skill-atlas/ru/">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site">
+    <div class="wrap">
+      <a class="brand" href="./">Skill Atlas</a>
+      <nav aria-label="Main">
+        <a href="#why">Why</a>
+        <a href="#demo">Demo</a>
+        <a href="#how">How it works</a>
+        <a href="#refuses">Boundaries</a>
+        <a href="#start">Docs</a>
+        <a href="https://github.com/Jorgut/skill-atlas">GitHub</a>
+      </nav>
+      <div class="lang" aria-label="Language">
+        <a href="./" aria-current="page">English</a>
+        <a href="zh-CN/" lang="zh-CN">简体中文</a>
+        <a href="ru/" lang="ru">Русский</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap">
+      <section class="hero" aria-labelledby="hero-title">
+        <p class="eyebrow">Agent skill manager · local-first · read-only by default</p>
+        <h1 id="hero-title">Know what your agents actually see.</h1>
+        <p class="lede">
+          Skill Atlas reports which coding agents exist on your machine, where each one loads rules and skills from,
+          whether your local Skill Atlas copies disagree, and where the same project exists in more than one place
+          with drifted documents. It is a skill for Codex, Claude Code, DeepSeek Harness, OpenCode, WorkBuddy,
+          Kimi Code and other agent tools.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="#install">Install with one command</a>
+          <a class="button" href="https://github.com/Jorgut/skill-atlas">Source on GitHub</a>
+        </div>
+        <pre id="install"><code>npx skills add Jorgut/skill-atlas</code></pre>
+      </section>
+
+      <section id="why" aria-labelledby="why-title">
+        <h2 id="why-title">Why this exists</h2>
+        <p class="section-note">Skill Atlas started from a concrete failure, not a feature list.</p>
+        <div class="grid two">
+          <div class="card">
+            <h3>The version label hid three merged PRs</h3>
+            <p>A source checkout and the copy an agent actually loaded were three merged pull requests apart,
+              while the installed version string still looked current. <code>agents scan</code> compares local
+              Skill Atlas copies and reports <code>version_mismatch</code> instead of trusting a label.</p>
+          </div>
+          <div class="card">
+            <h3>Agents kept their own project copies</h3>
+            <p>The same project existed in several directories, each opened by a different tool.
+              <code>projects audit</code> groups likely-duplicate copies by a normalized git remote (confirmed)
+              or a case-folded directory name (probable).</p>
+          </div>
+          <div class="card">
+            <h3>The copies' documents had drifted</h3>
+            <p><code>AGENTS.md</code>, <code>CLAUDE.md</code> and state files disagreed between copies, so what an
+              agent believed depended on which checkout it opened. The audit hashes those documents and reports
+              which copies differ, without printing their contents.</p>
+          </div>
+          <div class="card">
+            <h3>Configured files are not loaded rules</h3>
+            <p>A rule file existing on disk does not prove an agent read it. The evidence ladder stops at
+              <code>configured</code>; runtime loading is never claimed, and configured, loaded and
+              handoff-verified stay separate claims.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="demo" aria-labelledby="demo-title">
+        <h2 id="demo-title">30-second demo</h2>
+        <p class="section-note">Trimmed output from real runs. Tool counts, paths and hashes differ per machine.</p>
+        <div class="demo">
+          <h3>Which agent tools and Skill Atlas copies exist</h3>
+          <pre><code>python3 scripts/skill_atlas.py agents scan
+
+## Summary
+- tools detected: 12
+- tools configured: 4
+- skill atlas copies: 2
+- version mismatch: false</code></pre>
+
+          <h3>Where project copies drifted</h3>
+          <pre><code>python3 scripts/skill_atlas.py projects audit \
+  --project ~/repos/widgets --project ~/worktrees/widgets-review
+
+## Duplicate groups
+### `git-remote:github.com/example/widgets` (git-remote)
+- divergent docs:
+  - AGENTS.md (2 distinct hashes)
+- canonical candidate: `/home/you/repos/widgets`
+- requires user confirmation: true</code></pre>
+
+          <h3>Leave a receipted handoff note</h3>
+          <pre><code>python3 scripts/skill_atlas.py message send --project . --task issue-28 \
+  --from Codex --to "Claude Code" --summary "Review the camera diff" \
+  --requires-approval
+
+# Agent message: queued
+- state: queued
+- approval: pending
+- note: Local file transport only; the receiving agent has not been notified</code></pre>
+        </div>
+      </section>
+
+      <section id="how" aria-labelledby="how-title">
+        <h2 id="how-title">How it works</h2>
+        <p class="section-note">Three diagrams explain the whole model. No second source of truth, no hidden state.</p>
+
+        <figure>
+          <img src="assets/roles.svg" alt="Diagram: one upstream Git repository feeds a source checkout on main, a per-task worktree, a read-only installation copy, a pull request flow and a frozen archive.">
+          <figcaption><strong>One source of truth, four roles.</strong> Development happens in a per-task worktree;
+            the installation copy is read-only; replaced copies are frozen as evidence.
+            <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/development-layout.md">Read the layout guide</a>.</figcaption>
+        </figure>
+
+        <figure>
+          <img src="assets/message-flow.svg" alt="Diagram: a compact envelope moves from one agent through a local mailbox to a recipient, with append-only receipts and a human approval gate before completion.">
+          <figcaption><strong>Handoffs are receipts, not assumptions.</strong> A message carries a summary and short
+            evidence pointers. Approval-flagged messages cannot be completed until a person approves.
+            <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md">Read the message guide</a>.</figcaption>
+        </figure>
+
+        <figure>
+          <img src="assets/evidence-ladder.svg" alt="Diagram: three evidence levels, not-detected, detected and configured, with runtime loading marked as not claimed.">
+          <figcaption><strong>Evidence stops where the files end.</strong> The scan reports file evidence only;
+            runtime loading is never claimed, and candidate paths cannot reach <code>configured</code>.
+            <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-environments.md">Read the scan guide</a>.</figcaption>
+        </figure>
+      </section>
+
+      <section id="refuses" aria-labelledby="refuses-title">
+        <h2 id="refuses-title">What it does, what it refuses to do</h2>
+        <p class="section-note">The boundary is part of the product, not a disclaimer.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">It reports and plans</th><th scope="col">It refuses to do</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Which agent tools leave evidence locally, and which rule and skill roots they point at</td><td class="refuse">Send anything over the network by default; public search runs only with explicit options and configured access</td></tr>
+              <tr><td>Where Skill Atlas copies live, their versions, aliases and mismatch flag</td><td class="refuse">Trust a version label or claim an agent loaded a copy it did not</td></tr>
+              <tr><td>Where project copies exist, which look duplicated, and which documents differ</td><td class="refuse">Print, store or compare the contents of those project documents</td></tr>
+              <tr><td>Skill inventories, duplicates, update and consolidation plans</td><td class="refuse">Execute agent tools, run third-party code or start another agent</td></tr>
+              <tr><td>Skill, model and tool recommendations scored on a shared rubric</td><td class="refuse">Invent benchmarks, prices, availability or a permanent model ranking</td></tr>
+              <tr><td>Optional local handoff messages with receipts and a human approval gate</td><td class="refuse">Move, merge, archive or delete files automatically</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="start" aria-labelledby="start-title">
+        <h2 id="start-title">Start here</h2>
+        <p class="section-note">Deep documentation lives in the repository; every page states its limits.</p>
+        <div class="links">
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/README.md"><strong>README</strong><span>What it does, install, workflows</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/development-layout.md"><strong>Installation and development layout</strong><span>Source, worktree, installation, archive</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-environments.md"><strong>Local agent environment scan</strong><span>Evidence levels and limitations</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/project-root-audit.md"><strong>Project root audit</strong><span>Duplicate copies and divergent docs</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md"><strong>Agent handoff messages</strong><span>Envelopes, receipts, approval</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/cli-reference.md"><strong>CLI reference</strong><span>Every command and flag</span></a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Skill Atlas · local-first, read-only by default.</span>
+      <span><a href="https://github.com/Jorgut/skill-atlas">GitHub</a> · <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/GETTING_STARTED.en.md">Beginner guide</a> · no trackers, no cookies</span>
+    </div>
+  </footer>
+</body>
+</html>
