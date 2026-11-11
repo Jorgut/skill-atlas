@@ -122,21 +122,21 @@
         <p class="section-note">三张图说明了整个模型。没有第二个事实源，没有隐藏状态。</p>
 
         <figure>
-          <img src="../assets/roles.svg" alt="示意图：一个上游 Git 仓库供给 main 上的源代码检出、每个任务的 worktree（工作树）、只读安装副本、拉取请求流程和冻结的归档。">
+          <img src="../assets/roles.zh-CN.svg" alt="示意图：一个上游 Git 仓库供给 main 上的源代码检出、每个任务的 worktree（工作树）、只读安装副本、拉取请求流程和冻结的归档。">
           <figcaption><strong>唯一事实源，四种角色。</strong>开发在每个任务的 worktree（工作树）中进行；
             安装副本是只读的；被替换的副本会冻结为证据。
             <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/development-layout.md">阅读布局指南</a>。</figcaption>
         </figure>
 
         <figure>
-          <img src="../assets/message-flow.svg" alt="示意图：紧凑的信封从一个 Agent 经由本地邮箱传递到接收方，带有仅可追加的回执，并在完成前经过人工审批门。">
+          <img src="../assets/message-flow.zh-CN.svg" alt="示意图：紧凑的信封从一个 Agent 经由本地邮箱传递到接收方，带有仅可追加的回执，并在完成前经过人工审批门。">
           <figcaption><strong>交接靠回执，而不是假设。</strong>消息携带摘要和简短的证据指针。
             被标记为需要审批的消息，在有人批准之前不能完成。
             <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md">阅读消息指南</a>。</figcaption>
         </figure>
 
         <figure>
-          <img src="../assets/evidence-ladder.svg" alt="示意图：三个证据等级，未检测、已检测和已配置，其中运行时加载标注为不作断言。">
+          <img src="../assets/evidence-ladder.zh-CN.svg" alt="示意图：三个证据等级，未检测、已检测和已配置，其中运行时加载标注为不作断言。">
           <figcaption><strong>证据止于文件所能证明的范围。</strong>扫描只报告文件证据；
             从不断言运行时加载，候选路径无法达到 <code>configured</code>。
             <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-environments.md">阅读扫描指南</a>。</figcaption>

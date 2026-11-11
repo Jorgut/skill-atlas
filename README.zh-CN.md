@@ -2,6 +2,8 @@
 
 [English](README.md) · **简体中文** · [Русский](README.ru.md)
 
+网站：[jorgut.github.io/skill-atlas](https://jorgut.github.io/skill-atlas/)
+
 [![skills.sh](https://img.shields.io/badge/skills.sh-Jorgut/skill--atlas-8A2BE2?style=flat-square)](https://skills.sh/Jorgut/skill-atlas)
 [![Install with npx](https://img.shields.io/badge/npx%20skills%20add-Jorgut%2Fskill--atlas-000?style=flat-square)](https://github.com/Jorgut/skill-atlas)
 ![License](https://img.shields.io/github/license/Jorgut/skill-atlas?style=flat-square)
@@ -150,19 +152,19 @@ python3 scripts/skill_atlas.py message inbox --project . --task issue-28 \
 
 ### 一个唯一事实源，三类派生副本
 
-<img src="docs/assets/roles.svg" alt="Skill Atlas 副本角色示意图：上游 Git 仓库是唯一事实源；源码 checkout 保持在 main；每个任务使用自己的 worktree（工作树）与分支，并通过 pull request 合并；安装副本对 Agent 只读，通过 fast-forward 更新；归档是冻结的证据，永远不会被加载。">
+<img src="docs/assets/roles.zh-CN.svg" alt="Skill Atlas 副本角色示意图：上游 Git 仓库是唯一事实源；源码 checkout 保持在 main；每个任务使用自己的 worktree（工作树）与分支，并通过 pull request 合并；安装副本对 Agent 只读，通过 fast-forward 更新；归档是冻结的证据，永远不会被加载。">
 
 开发在任务 worktree 的分支上进行，并通过 pull request 合并。安装副本从仓库派生，不就地编辑；归档副本是冻结的证据，而不是工作目录。软链接的 Skill 条目不会增加新角色，它只指向这些位置之一。参见[安装与开发布局](docs/development-layout.md)。
 
 ### 交接是回执，不是通知
 
-<img src="docs/assets/message-flow.svg" alt="本地交接消息示意图：Agent A 排队一个不可变信封，包含 id、发送方与接收方、摘要、简短证据指针和链式 pass；信封、状态文件和仅追加回执位于 .agent-state/messages 下；Agent B 读取自己的收件箱并记录 taken、completed 或 refused；需要批准时由人批准；没有网络、没有启动 Agent、没有通知。">
+<img src="docs/assets/message-flow.zh-CN.svg" alt="本地交接消息示意图：Agent A 排队一个不可变信封，包含 id、发送方与接收方、摘要、简短证据指针和链式 pass；信封、状态文件和仅追加回执位于 .agent-state/messages 下；Agent B 读取自己的收件箱并记录 taken、completed 或 refused；需要批准时由人批准；没有网络、没有启动 Agent、没有通知。">
 
 信封不可变，状态变更会留下仅追加的回执，批准是人记录的动作。从不声称送达：接收方在自己选择时读取收件箱，只有它自己的确认才会让消息向前推进。参见[Agent 交接消息](docs/agent-messaging.md)。
 
 ### 扫描止步于文件证据
 
-<img src="docs/assets/evidence-ladder.svg" alt="文件证据阶梯示意图：not-detected 表示没有工具特定证据；detected 表示存在工具根目录、可执行文件或非共享 Skill 根目录；configured 表示存在有文档依据的指令条目，或工具已被检测到且某个有文档依据的 Skill 根目录包含 Skill。运行时加载被单独显示为未声称。">
+<img src="docs/assets/evidence-ladder.zh-CN.svg" alt="文件证据阶梯示意图：not-detected 表示没有工具特定证据；detected 表示存在工具根目录、可执行文件或非共享 Skill 根目录；configured 表示存在有文档依据的指令条目，或工具已被检测到且某个有文档依据的 Skill 根目录包含 Skill。运行时加载被单独显示为未声称。">
 
 `not-detected`（未检测）→ `detected`（已检测）→ `configured`（已配置）是本地文件证据的等级（证据等级），不是运行时状态。共享 Skill 根目录会单独报告，绝不算作工具特定证据；候选路径最多只能到达 `detected`，永远不能到达 `configured`。参见[本地 Agent 环境扫描](docs/agent-environments.md)。
 

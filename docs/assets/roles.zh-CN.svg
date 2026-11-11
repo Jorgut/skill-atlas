@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 460" role="img" aria-labelledby="title desc">
+  <title id="title">Skill Atlas 副本角色</title>
+  <desc id="desc">一个上游 Git 仓库是唯一事实源。源码检出保持在 main 上。每个任务使用自己的 worktree（工作树）和分支，并通过拉取请求合并。安装副本是只读的，仅通过 fast-forward 更新。归档的副本是冻结的证据。</desc>
+  <style>
+    .box { fill: #ffffff; stroke: #3b4252; stroke-width: 1.5; rx: 10; }
+    .accent { fill: #e8f4f0; stroke: #0f766e; stroke-width: 2; }
+    .frozen { fill: #f6f7f9; stroke: #6b7280; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .label { font: 600 15px -apple-system, "Segoe UI", sans-serif; fill: #1f2933; }
+    .small { font: 13px -apple-system, "Segoe UI", sans-serif; fill: #3b4252; }
+    .mono { font: 12.5px ui-monospace, "SF Mono", Menlo, monospace; fill: #1f2933; }
+    .note { font: 12px -apple-system, "Segoe UI", sans-serif; fill: #52606d; }
+    .arrow { stroke: #0f766e; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    .arrow-muted { stroke: #6b7280; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead-muted); stroke-dasharray: 5 4; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#0f766e"/>
+    </marker>
+    <marker id="arrowhead-muted" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="330" y="24" width="300" height="72" rx="10" class="accent"/>
+  <text x="480" y="52" text-anchor="middle" class="label">上游 Git 仓库</text>
+  <text x="480" y="74" text-anchor="middle" class="mono">origin/main（唯一事实源）</text>
+
+  <rect x="70" y="150" width="250" height="96" rx="10" class="box"/>
+  <text x="195" y="178" text-anchor="middle" class="label">源码检出</text>
+  <text x="195" y="200" text-anchor="middle" class="small">保持在 main，干净</text>
+  <text x="195" y="222" text-anchor="middle" class="mono">~/repos/skill-atlas</text>
+
+  <rect x="370" y="150" width="220" height="96" rx="10" class="box"/>
+  <text x="480" y="178" text-anchor="middle" class="label">每个任务的 worktree</text>
+  <text x="480" y="200" text-anchor="middle" class="small">一个分支，一个任务</text>
+  <text x="480" y="222" text-anchor="middle" class="mono">feat/issue-42</text>
+
+  <rect x="640" y="150" width="250" height="96" rx="10" class="box"/>
+  <text x="765" y="178" text-anchor="middle" class="label">拉取请求</text>
+  <text x="765" y="200" text-anchor="middle" class="small">评审、CI、合并</text>
+  <text x="765" y="222" text-anchor="middle" class="mono">同一 origin，无副本</text>
+
+  <rect x="70" y="320" width="250" height="96" rx="10" class="box"/>
+  <text x="195" y="348" text-anchor="middle" class="label">安装副本</text>
+  <text x="195" y="370" text-anchor="middle" class="small">对 Agent 只读</text>
+  <text x="195" y="392" text-anchor="middle" class="mono">仅 fast-forward</text>
+
+  <rect x="640" y="320" width="250" height="96" rx="10" class="frozen"/>
+  <text x="765" y="348" text-anchor="middle" class="label">归档</text>
+  <text x="765" y="370" text-anchor="middle" class="small">冻结证据，从不加载</text>
+  <text x="765" y="392" text-anchor="middle" class="mono">bundle + tar + checksums</text>
+
+  <path class="arrow" d="M195 150 L195 126 L330 126"/>
+  <text x="262" y="118" text-anchor="middle" class="note">fetch</text>
+
+  <path class="arrow" d="M480 96 L480 150"/>
+  <text x="492" y="126" class="note">创建 worktree</text>
+
+  <path class="arrow" d="M590 198 L640 198"/>
+  <text x="615" y="188" text-anchor="middle" class="note">push</text>
+
+  <path class="arrow" d="M765 150 L765 126 L630 126"/>
+  <text x="700" y="118" text-anchor="middle" class="note">merge</text>
+
+  <path class="arrow" d="M195 246 L195 320"/>
+  <text x="207" y="288" class="note">pull（仅 ff）</text>
+
+  <path class="arrow-muted" d="M480 246 L480 320 L640 320"/>
+  <text x="500" y="310" class="note">被替换的副本冻结</text>
+
+  <text x="70" y="440" class="note">符号链接的 Skill 条目不会增加角色：它只指向这些位置之一。</text>
+</svg>
