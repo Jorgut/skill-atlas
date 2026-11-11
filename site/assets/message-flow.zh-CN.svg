@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" role="img" aria-labelledby="title desc">
+  <title id="title">本地交接消息流程</title>
+  <desc id="desc">Agent 将一个紧凑的信封排队，其中包含 id、发送方与接收方、摘要、简短证据指针以及链式 pass。不可变的信封、状态文件和仅可追加的回执位于 .agent-state/messages 下。接收方读取自己的收件箱并记录 taken、completed 或 refused。标记为需要审批的消息，在有人批准之前不能完成。无网络、不启动 Agent、不发送通知。</desc>
+  <style>
+    .box { fill: #ffffff; stroke: #3b4252; stroke-width: 1.5; rx: 10; }
+    .accent { fill: #e8f4f0; stroke: #0f766e; stroke-width: 2; }
+    .warn { fill: #fff7ed; stroke: #b45309; stroke-width: 2; }
+    .label { font: 600 15px -apple-system, "Segoe UI", sans-serif; fill: #1f2933; }
+    .small { font: 13px -apple-system, "Segoe UI", sans-serif; fill: #3b4252; }
+    .mono { font: 12.5px ui-monospace, "SF Mono", Menlo, monospace; fill: #1f2933; }
+    .note { font: 12px -apple-system, "Segoe UI", sans-serif; fill: #52606d; }
+    .arrow { stroke: #0f766e; stroke-width: 2; fill: none; marker-end: url(#a); }
+    .arrow-warn { stroke: #b45309; stroke-width: 2; fill: none; marker-end: url(#aw); }
+    .no { font: 13px -apple-system, "Segoe UI", sans-serif; fill: #b91c1c; }
+  </style>
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#0f766e"/></marker>
+    <marker id="aw" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#b45309"/></marker>
+  </defs>
+
+  <rect x="40" y="120" width="180" height="80" rx="10" class="box"/>
+  <text x="130" y="152" text-anchor="middle" class="label">Agent A</text>
+  <text x="130" y="174" text-anchor="middle" class="small">有结论</text>
+
+  <rect x="290" y="100" width="270" height="120" rx="10" class="accent"/>
+  <text x="425" y="128" text-anchor="middle" class="label">信封</text>
+  <text x="425" y="150" text-anchor="middle" class="mono">id, from → to, pass</text>
+  <text x="425" y="170" text-anchor="middle" class="mono">摘要 + 简短证据</text>
+  <text x="425" y="190" text-anchor="middle" class="mono">request_id（安全重试）</text>
+  <text x="425" y="210" text-anchor="middle" class="mono">requires_approval 是/否</text>
+
+  <rect x="290" y="270" width="270" height="120" rx="10" class="box"/>
+  <text x="425" y="298" text-anchor="middle" class="label">.agent-state/messages/</text>
+  <text x="425" y="320" text-anchor="middle" class="mono">envelopes/（不可变）</text>
+  <text x="425" y="340" text-anchor="middle" class="mono">status/     (queued → …)</text>
+  <text x="425" y="360" text-anchor="middle" class="mono">receipts/（仅追加）</text>
+  <text x="425" y="380" text-anchor="middle" class="mono">approvals/（仅人工）</text>
+
+  <rect x="640" y="120" width="180" height="80" rx="10" class="box"/>
+  <text x="730" y="152" text-anchor="middle" class="label">Agent B</text>
+  <text x="730" y="174" text-anchor="middle" class="small">读取收件箱</text>
+
+  <rect x="640" y="270" width="180" height="120" rx="10" class="warn"/>
+  <text x="730" y="298" text-anchor="middle" class="label">人</text>
+  <text x="730" y="320" text-anchor="middle" class="small">有标记时审批</text>
+  <text x="730" y="342" text-anchor="middle" class="small">记录姓名</text>
+  <text x="730" y="364" text-anchor="middle" class="small">（不校验身份）</text>
+
+  <path class="arrow" d="M220 160 L290 160"/>
+  <path class="arrow" d="M425 220 L425 270"/>
+  <path class="arrow" d="M560 160 L640 160"/>
+  <text x="600" y="150" text-anchor="middle" class="note">读取收件箱</text>
+  <path class="arrow" d="M730 200 L730 270"/>
+  <text x="742" y="240" class="note">先审批</text>
+  <path class="arrow-warn" d="M640 330 L560 330"/>
+  <text x="600" y="320" text-anchor="middle" class="note">人工审批门</text>
+
+  <text x="290" y="60" class="no">无网络 · 不启动 Agent · 不发送通知 · 不自动派发</text>
+  <text x="40" y="430" class="note">Ack 记录 taken / completed / refused。标记 requires_approval 的消息，未经人工批准不能完成。</text>
+</svg>

@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 460" role="img" aria-labelledby="title desc">
+  <title id="title">Роли копий Skill Atlas</title>
+  <desc id="desc">Один вышестоящий Git-репозиторий — единственный источник истины. Исходный checkout остаётся на main. Каждая задача использует свой worktree (рабочее дерево) и ветку, которые сливаются через пул-реквест. Установочная копия доступна только для чтения и обновляется только fast-forward. Заархивированные копии — замороженные доказательства.</desc>
+  <style>
+    .box { fill: #ffffff; stroke: #3b4252; stroke-width: 1.5; rx: 10; }
+    .accent { fill: #e8f4f0; stroke: #0f766e; stroke-width: 2; }
+    .frozen { fill: #f6f7f9; stroke: #6b7280; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .label { font: 600 15px -apple-system, "Segoe UI", sans-serif; fill: #1f2933; }
+    .small { font: 13px -apple-system, "Segoe UI", sans-serif; fill: #3b4252; }
+    .mono { font: 12.5px ui-monospace, "SF Mono", Menlo, monospace; fill: #1f2933; }
+    .note { font: 12px -apple-system, "Segoe UI", sans-serif; fill: #52606d; }
+    .arrow { stroke: #0f766e; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    .arrow-muted { stroke: #6b7280; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead-muted); stroke-dasharray: 5 4; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#0f766e"/>
+    </marker>
+    <marker id="arrowhead-muted" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="330" y="24" width="300" height="72" rx="10" class="accent"/>
+  <text x="480" y="52" text-anchor="middle" class="label">Вышестоящий Git-репозиторий</text>
+  <text x="480" y="74" text-anchor="middle" class="mono">origin/main — источник истины</text>
+
+  <rect x="70" y="150" width="250" height="96" rx="10" class="box"/>
+  <text x="195" y="178" text-anchor="middle" class="label">Исходный checkout</text>
+  <text x="195" y="200" text-anchor="middle" class="small">остаётся на main, чисто</text>
+  <text x="195" y="222" text-anchor="middle" class="mono">~/repos/skill-atlas</text>
+
+  <rect x="370" y="150" width="220" height="96" rx="10" class="box"/>
+  <text x="480" y="178" text-anchor="middle" class="label">Worktree для задачи</text>
+  <text x="480" y="200" text-anchor="middle" class="small">одна ветка, одна задача</text>
+  <text x="480" y="222" text-anchor="middle" class="mono">feat/issue-42</text>
+
+  <rect x="640" y="150" width="250" height="96" rx="10" class="box"/>
+  <text x="765" y="178" text-anchor="middle" class="label">Пул-реквест</text>
+  <text x="765" y="200" text-anchor="middle" class="small">ревью, CI, слияние</text>
+  <text x="765" y="222" text-anchor="middle" class="mono">тот же origin, без копий</text>
+
+  <rect x="70" y="320" width="250" height="96" rx="10" class="box"/>
+  <text x="195" y="348" text-anchor="middle" class="label">Установочная копия</text>
+  <text x="195" y="370" text-anchor="middle" class="small">только для чтения Agent</text>
+  <text x="195" y="392" text-anchor="middle" class="mono">только fast-forward</text>
+
+  <rect x="640" y="320" width="250" height="96" rx="10" class="frozen"/>
+  <text x="765" y="348" text-anchor="middle" class="label">Архив</text>
+  <text x="765" y="370" text-anchor="middle" class="small">заморожены, не загружаются</text>
+  <text x="765" y="392" text-anchor="middle" class="mono">bundle + tar + checksums</text>
+
+  <path class="arrow" d="M195 150 L195 126 L330 126"/>
+  <text x="262" y="118" text-anchor="middle" class="note">fetch</text>
+
+  <path class="arrow" d="M480 96 L480 150"/>
+  <text x="492" y="126" class="note">создать worktree</text>
+
+  <path class="arrow" d="M590 198 L640 198"/>
+  <text x="615" y="188" text-anchor="middle" class="note">push</text>
+
+  <path class="arrow" d="M765 150 L765 126 L630 126"/>
+  <text x="700" y="118" text-anchor="middle" class="note">merge</text>
+
+  <path class="arrow" d="M195 246 L195 320"/>
+  <text x="207" y="288" class="note">pull (только ff)</text>
+
+  <path class="arrow-muted" d="M480 246 L480 320 L640 320"/>
+  <text x="500" y="310" class="note">заменённые копии заморожены</text>
+
+  <text x="70" y="440" class="note">Символическая ссылка на навык не добавляет роль: она лишь указывает на одно из этих мест.</text>
+</svg>
