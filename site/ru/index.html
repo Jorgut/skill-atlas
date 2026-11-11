@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skill Atlas — что на самом деле видят ваши агенты</title>
+  <meta name="description" content="Локальные доказательства только для чтения об установленных агентах для программирования, их корнях правил и навыков, копиях Skill Atlas и разошедшихся копиях проектов. Один навык, одна команда.">
+  <link rel="alternate" hreflang="en" href="https://jorgut.github.io/skill-atlas/">
+  <link rel="alternate" hreflang="zh-CN" href="https://jorgut.github.io/skill-atlas/zh-CN/">
+  <link rel="alternate" hreflang="ru" href="https://jorgut.github.io/skill-atlas/ru/">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Перейти к содержимому</a>
+
+  <header class="site">
+    <div class="wrap">
+      <a class="brand" href="../">Skill Atlas</a>
+      <nav aria-label="Основная навигация">
+        <a href="#why">Зачем</a>
+        <a href="#demo">Демо</a>
+        <a href="#how">Как это работает</a>
+        <a href="#refuses">Границы</a>
+        <a href="#start">Документация</a>
+        <a href="https://github.com/Jorgut/skill-atlas">GitHub</a>
+      </nav>
+      <div class="lang" aria-label="Язык">
+        <a href="../" lang="en">English</a>
+        <a href="../zh-CN/" lang="zh-CN">简体中文</a>
+        <a href="./" aria-current="page">Русский</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap">
+      <section class="hero" aria-labelledby="hero-title">
+        <p class="eyebrow">Менеджер навыков агентов · приоритет локальной работы · только для чтения по умолчанию</p>
+        <h1 id="hero-title">Узнайте, что на самом деле видят ваши агенты.</h1>
+        <p class="lede">
+          Skill Atlas показывает, какие агенты для программирования есть на вашей машине,
+          откуда каждый из них загружает правила и навыки, совпадают ли ваши локальные копии Skill Atlas
+          и где один и тот же проект существует более чем в одном месте с разошедшимися документами.
+          Это навык для Codex, Claude Code, DeepSeek Harness, OpenCode, WorkBuddy, Kimi Code
+          и других инструментов агентов.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="#install">Установить одной командой</a>
+          <a class="button" href="https://github.com/Jorgut/skill-atlas">Исходный код на GitHub</a>
+        </div>
+        <pre id="install"><code>npx skills add Jorgut/skill-atlas</code></pre>
+      </section>
+
+      <section id="why" aria-labelledby="why-title">
+        <h2 id="why-title">Почему это существует</h2>
+        <p class="section-note">Skill Atlas вырос из конкретного сбоя, а не из списка возможностей.</p>
+        <div class="grid two">
+          <div class="card">
+            <h3>Метка версии скрывала три слитых PR</h3>
+            <p>Исходная рабочая копия и копия, которую агент фактически загрузил, расходились на три
+              слитых пул-реквеста, при этом установленная строка версии выглядела актуальной.
+              <code>agents scan</code> сравнивает локальные копии Skill Atlas и сообщает
+              <code>version_mismatch</code>, а не доверяет метке.</p>
+          </div>
+          <div class="card">
+            <h3>У агентов были собственные копии проектов</h3>
+            <p>Один и тот же проект существовал в нескольких каталогах, и каждый открывался отдельным
+              инструментом. <code>projects audit</code> группирует вероятные дубликаты по нормализованному
+              git remote (подтверждено) или по имени каталога без учёта регистра (вероятно).</p>
+          </div>
+          <div class="card">
+            <h3>Документы в копиях разошлись</h3>
+            <p><code>AGENTS.md</code>, <code>CLAUDE.md</code> и файлы состояния различались между копиями,
+              поэтому представление агента зависело от того, какую рабочую копию он открыл.
+              Аудит хеширует эти документы и сообщает, какие копии различаются, не выводя их содержимое.</p>
+          </div>
+          <div class="card">
+            <h3>Настроенные файлы — не загруженные правила</h3>
+            <p>Наличие файла правил на диске не доказывает, что агент его прочитал. Лестница доказательств
+              останавливается на <code>configured</code>; загрузка во время выполнения никогда не утверждается,
+              а настроено, загружено и проверено при передаче остаются отдельными утверждениями.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="demo" aria-labelledby="demo-title">
+        <h2 id="demo-title">Демонстрация за 30 секунд</h2>
+        <p class="section-note">Сокращённый вывод реальных запусков. Количество инструментов, пути и хеши зависят от машины.</p>
+        <div class="demo">
+          <h3>Какие инструменты агентов и копии Skill Atlas существуют</h3>
+          <pre><code>python3 scripts/skill_atlas.py agents scan
+
+## Summary
+- tools detected: 12
+- tools configured: 4
+- skill atlas copies: 2
+- version mismatch: false</code></pre>
+
+          <h3>Где копии проектов разошлись</h3>
+          <pre><code>python3 scripts/skill_atlas.py projects audit \
+  --project ~/repos/widgets --project ~/worktrees/widgets-review
+
+## Duplicate groups
+### `git-remote:github.com/example/widgets` (git-remote)
+- divergent docs:
+  - AGENTS.md (2 distinct hashes)
+- canonical candidate: `/home/you/repos/widgets`
+- requires user confirmation: true</code></pre>
+
+          <h3>Оставить сообщение о передаче с подтверждением</h3>
+          <pre><code>python3 scripts/skill_atlas.py message send --project . --task issue-28 \
+  --from Codex --to "Claude Code" --summary "Review the camera diff" \
+  --requires-approval
+
+# Agent message: queued
+- state: queued
+- approval: pending
+- note: Local file transport only; the receiving agent has not been notified</code></pre>
+        </div>
+      </section>
+
+      <section id="how" aria-labelledby="how-title">
+        <h2 id="how-title">Как это работает</h2>
+        <p class="section-note">Три схемы объясняют всю модель. Никакого второго источника истины, никакого скрытого состояния.</p>
+
+        <figure>
+          <img src="../assets/roles.svg" alt="Схема: один вышестоящий Git-репозиторий питает исходную рабочую копию на main, worktree (рабочее дерево) для каждой задачи, установочную копию только для чтения, процесс пул-реквеста и замороженный архив.">
+          <figcaption><strong>Единственный источник истины, четыре роли.</strong> Разработка идёт в worktree (рабочее дерево)
+            для каждой задачи; установочная копия доступна только для чтения; заменённые копии замораживаются как доказательства.
+            <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/development-layout.md">Прочитать руководство по структуре</a>.</figcaption>
+        </figure>
+
+        <figure>
+          <img src="../assets/message-flow.svg" alt="Схема: компактный конверт идёт от одного агента через локальный почтовый ящик к получателю, с подтверждениями, которые можно только дописывать, и шлюзом одобрения человеком до завершения.">
+          <figcaption><strong>Передача — это подтверждение, а не допущение.</strong> Сообщение несёт краткое содержание
+            и короткие указатели на доказательства. Сообщения с отметкой об одобрении нельзя завершить,
+            пока человек их не одобрит.
+            <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md">Прочитать руководство по сообщениям</a>.</figcaption>
+        </figure>
+
+        <figure>
+          <img src="../assets/evidence-ladder.svg" alt="Схема: три уровня доказательств — не обнаружено, обнаружено и сконфигурировано, — где загрузка во время выполнения отмечена как не утверждаемая.">
+          <figcaption><strong>Доказательства заканчиваются там, где заканчиваются файлы.</strong> Сканирование сообщает
+            только файловые доказательства; загрузка во время выполнения никогда не утверждается,
+            а пути-кандидаты не могут достичь <code>configured</code>.
+            <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-environments.md">Прочитать руководство по сканированию</a>.</figcaption>
+        </figure>
+      </section>
+
+      <section id="refuses" aria-labelledby="refuses-title">
+        <h2 id="refuses-title">Что он делает и от чего отказывается</h2>
+        <p class="section-note">Граница — часть продукта, а не дисклеймер.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Он сообщает и планирует</th><th scope="col">От чего он отказывается</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Какие инструменты агентов оставляют доказательства локально и на какие корни правил и навыков они указывают</td><td class="refuse">Отправлять что-либо по сети по умолчанию; публичный поиск выполняется только с явными опциями и настроенным доступом</td></tr>
+              <tr><td>Где находятся копии Skill Atlas, их версии, псевдонимы и флаг несовпадения</td><td class="refuse">Доверять метке версии или утверждать, что агент загрузил копию, которую он не загружал</td></tr>
+              <tr><td>Где существуют копии проектов, какие выглядят дубликатами и какие документы различаются</td><td class="refuse">Выводить, хранить или сравнивать содержимое этих документов проектов</td></tr>
+              <tr><td>Инвентаризация навыков, дубликаты, планы обновления и объединения</td><td class="refuse">Запускать инструменты агентов, выполнять сторонний код или запускать другого агента</td></tr>
+              <tr><td>Рекомендации навыков, моделей и инструментов, оценённые по общей рубрике</td><td class="refuse">Выдумывать бенчмарки, цены, доступность или постоянный рейтинг моделей</td></tr>
+              <tr><td>Необязательные локальные сообщения о передаче с подтверждениями и шлюзом одобрения человеком</td><td class="refuse">Автоматически перемещать, сливать, архивировать или удалять файлы</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="start" aria-labelledby="start-title">
+        <h2 id="start-title">С чего начать</h2>
+        <p class="section-note">Подробная документация находится в репозитории; каждая страница указывает свои ограничения.</p>
+        <div class="links">
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/README.md"><strong>README</strong><span>Что делает, установка, рабочие процессы</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/development-layout.md"><strong>Установка и структура разработки</strong><span>Исходники, worktree (рабочее дерево), установка, архив</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-environments.md"><strong>Сканирование локальной среды агентов</strong><span>Уровни доказательств и ограничения</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/project-root-audit.md"><strong>Аудит корневых каталогов проектов</strong><span>Дубликаты копий и разошедшиеся документы</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md"><strong>Сообщения о передаче между агентами</strong><span>Конверты, подтверждения, одобрение</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/cli-reference.md"><strong>Справочник CLI</strong><span>Каждая команда и флаг</span></a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Skill Atlas · приоритет локальной работы, только для чтения по умолчанию.</span>
+      <span><a href="https://github.com/Jorgut/skill-atlas">GitHub</a> · <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/GETTING_STARTED.ru.md">Руководство для начинающих</a> · без трекеров и cookie</span>
+    </div>
+  </footer>
+</body>
+</html>
