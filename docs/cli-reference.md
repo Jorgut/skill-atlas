@@ -143,15 +143,21 @@ python3 <skill-root>/scripts/skill_atlas.py disk scan --project . --format json
 Flags: `--home PATH` (known-root base, default user home), repeated
 `--root PATH`, `--project PATH`, `--top N` (default 15, bounded to 0–100),
 `--min-file-mb N` (default 200; files whose allocated size is at or above),
-`--max-entries N` (default 400000, per-root safety limit), and `--format
-markdown|json`. Sizes are reported as allocated bytes (`st_blocks × 512`, the
-real disk usage) with apparent bytes (`st_size`) in parentheses when they
-differ; the largest-files threshold, ordering, and risk totals use allocated
-bytes. The scan reads metadata only, never follows symlinks while walking, and
-never deletes, moves, compresses, or archives anything; categories, risk levels,
-and suggested actions are name-based heuristics and plans, not cleanup. See
+`--max-entries N` (default 400000, per-root safety limit), `--apply` (move step;
+requires `--to-trash` and `--confirm`), `--to-trash`, `--confirm`, repeated
+`--risk low|medium` (cleanup risks; default `low`), `--trash-dir PATH` (default
+`~/.Trash`; must exist), and `--format markdown|json`. Sizes are reported as
+allocated bytes (`st_blocks × 512`, the real disk usage) with apparent bytes
+(`st_size`) in parentheses when they differ; the largest-files threshold,
+ordering, and risk totals use allocated bytes. The scan reads metadata only,
+never follows symlinks while walking, and by default never deletes, moves,
+compresses, or archives anything. With `--apply --to-trash --confirm` it moves
+selected low/medium risk direct-child candidates into the trash directory
+(unique names, never `rm -rf`, high-risk entries and symlinks never moved) and
+space is freed only after the Trash is emptied. Categories, risk levels, and
+suggested actions are name-based heuristics and plans, not cleanup. See
 [Disk Usage Audit](disk-scan.md) for known roots, categories, the JSON contract,
-and limitations.
+the `apply` result, and limitations.
 
 ## Local agent messages
 

@@ -253,7 +253,7 @@ $skill-atlas find Rhino and Blender skills, connectors, and missing capabilities
 Use Skill Atlas to compare my UX skill with public competitors without replacing mine.
 ```
 
-### 磁盘占用（只读）
+### 磁盘占用（默认只读）
 
 Agent 工作也会在本地留下大量数据。`disk scan` 会审计你主目录下的已知 Agent 根目录，以及可重复提供的 `--root` 目录和一个可选的 `--project`：
 
@@ -262,9 +262,11 @@ python3 scripts/skill_atlas.py disk scan
 python3 scripts/skill_atlas.py disk scan \
   --root ~/Documents/ChatGPT --root ~/Documents/Codex --min-file-mb 100
 python3 scripts/skill_atlas.py disk scan --project . --format json
+# Opt-in cleanup: move selected low/medium-risk candidates to Trash.
+python3 scripts/skill_atlas.py disk scan --apply --to-trash --confirm
 ```
 
-它会报告表观大小与分配大小、类别、风险等级（低/中/高）、按分配大小排列的最大文件，以及带仅计划操作的建议复查列表。分配大小（`st_blocks × 512`）是真实磁盘占用；表观大小（`st_size`）是逻辑文件长度，对稀疏文件可能大得多，因此最大文件筛选、排序和风险总计使用分配字节，两者不同时以 `分配 (表观)` 显示。它只读取元数据：不读取文件内容、凭据或会话文本。它在遍历时从不跟随软链接，也从不删除、移动、压缩或归档任何内容。分配大小并不保证可回收空间，因为克隆、快照和硬链接可能共享数据块；数据库或 `.git` 对象不得直接删除。行动前请先复查；参见[磁盘占用审计](docs/disk-scan.md)。
+它会报告表观大小与分配大小、类别、风险等级（低/中/高）、按分配大小排列的最大文件，以及带仅计划操作的建议复查列表。分配大小（`st_blocks × 512`）是真实磁盘占用；表观大小（`st_size`）是逻辑文件长度，对稀疏文件可能大得多，因此最大文件筛选、排序和风险总计使用分配字节，两者不同时以 `分配 (表观)` 显示。它只读取元数据：不读取文件内容、凭据或会话文本。它在遍历时从不跟随软链接；默认不删除、移动、压缩或归档任何内容。清理需要显式启用：`--apply --to-trash --confirm`（配合可重复的 `--risk low|medium`，默认 low）会把选中的低/中风险直接子项移入 `~/.Trash`（或 `--trash-dir`），永远不会移动高风险数据库、`.git` 对象或软链接，也从不使用 `rm -rf` 或永久删除；只有清空回收站后才会真正释放空间。分配大小并不保证可回收空间，因为克隆、快照和硬链接可能共享数据块；数据库或 `.git` 对象不得直接删除。行动前请先复查；参见[磁盘占用审计](docs/disk-scan.md)。
 
 ## 从这里开始
 
@@ -582,4 +584,4 @@ python3 -m unittest discover -s tests -v
 
 ## 状态
 
-Skill Atlas 当前为 `0.9.1-beta`。在稳定版发布前，接口和平台适配器可能发生变化。
+Skill Atlas 当前为 `0.10.0-beta`。在稳定版发布前，接口和平台适配器可能发生变化。

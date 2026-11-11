@@ -1,9 +1,10 @@
 # Disk Usage Audit
 
-`disk scan` is a read-only audit of the space that agent work produces locally:
-agent homes, session transcripts, caches, plugins, attachments, project media,
-build artifacts and Git objects. It was added in `0.9.0-beta`; since
-`0.9.1-beta` it reports both apparent and allocated sizes.
+`disk scan` audits the space that agent work produces locally: agent homes,
+session transcripts, caches, plugins, attachments, project media, build
+artifacts and Git objects. It was added in `0.9.0-beta`; since `0.9.1-beta` it
+reports both apparent and allocated sizes, and `0.10.0-beta` adds an explicit,
+opt-in Trash cleanup path.
 
 Every result reports two sizes. **Allocated size** (`st_blocks × 512`) is the
 real disk usage; **apparent size** (`st_size`) is the logical file length and
@@ -12,10 +13,12 @@ can be much larger for sparse files. When the two differ, sizes are printed as
 reclaimable ordering and risk totals all use allocated bytes.
 
 The audit reads file metadata only. It never reads file contents, credentials,
-session text or account data, never follows symlinks while walking a tree, never
-deletes or moves anything, and every suggestion is a plan for the user. Its job
-is to show where space goes and how risky each candidate is before anyone
-cleans anything up.
+session text or account data and never follows symlinks while walking a tree.
+By default it never moves or deletes anything and every suggestion is a plan for
+the user. Only the explicit `--apply --to-trash --confirm` combination moves
+selected low/medium risk candidates into a trash directory; permanent deletion
+and `rm -rf` are never used. Its job is to show where space goes and how risky
+each candidate is before anyone cleans anything up.
 
 ## What the audit does and does not prove
 
@@ -31,20 +34,26 @@ The audit reports:
 - a **suggested review** list with one suggested action per category; and
 - explicit limitations in every result.
 
+With `--apply --to-trash --confirm`, it can also move selected low/medium risk
+direct-child candidates into a trash directory and report the result.
+
 The audit does **not** prove:
 
 - how much disk space deleting an entry would actually free — allocated size is
   real disk consumption, but APFS clones, snapshots, hard links and filesystem
   behavior can still make reclaimable space differ;
+- that moving a path to Trash frees space immediately — the space is released
+  only after the Trash is emptied, and this tool never empties it;
 - which size is meaningful for a given file — allocated size shows disk
   consumption, while apparent size shows logical length and can be far larger
   for sparse files;
-- that a candidate is safe to remove — categories and risks are name-based
-  heuristics, not an inspection of the data;
+- that a candidate is safe to remove or move to Trash — categories and risks
+  are name-based heuristics, not an inspection of the data;
 - that a large file is unused, stale, or duplicated;
 - that the scan covers the whole machine — known roots are discovery hints, and
   linked roots or external volumes are not followed;
-- that any suggested action has been or will be performed.
+- that any suggested action has been or will be performed; in particular,
+  `--apply` results are direct moves to Trash, not permanent deletion.
 
 Missing or unreadable paths are skipped and reported; they do not abort the
 audit.
@@ -67,9 +76,13 @@ python3 <skill-root>/scripts/skill_atlas.py disk scan \
 
 # Machine-readable result for review notes or automation.
 python3 <skill-root>/scripts/skill_atlas.py disk scan --format json
+
+# Opt-in: move selected low/medium-risk candidates to Trash. Review first.
+python3 <skill-root>/scripts/skill_atlas.py disk scan --apply --to-trash --confirm
 ```
 
-The command is safe to run repeatedly: it creates and changes no state.
+The command is safe to run repeatedly without `--apply --to-trash --confirm`:
+it creates and changes no state.
 
 | Flag | Meaning |
 |---|---|
@@ -79,6 +92,11 @@ The command is safe to run repeatedly: it creates and changes no state.
 | `--top N` | Number of largest files to report, ranked by allocated size (default 15; bounded to 0–100). |
 | `--min-file-mb N` | Report files whose allocated size is at or above this size in MB (default 200). `0` includes every file size. |
 | `--max-entries N` | Per-root safety limit on filesystem entries (default 400000, minimum 1000). When hit, that root is marked truncated and its sizes are incomplete. |
+| `--apply` | Opt-in move step. Requires `--to-trash` and `--confirm`; without all three flags nothing is moved. |
+| `--to-trash` | Move selected low/medium risk candidates into the trash directory. Permanent deletion is not supported. |
+| `--confirm` | Explicit confirmation for `--apply`. |
+| `--risk low\|medium` | Cleanup risk to move. May be repeated. Default: `low`. High risk is not selectable. |
+| `--trash-dir PATH` | Destination trash directory (default `~/.Trash`). Must already exist; mainly for tests and external volumes. |
 | `--format markdown\|json` | Markdown report (default) or the full result object. |
 
 `--root` and `--project` are added to the default scope. If one requested root
@@ -158,6 +176,9 @@ Markdown output has these sections:
   category and risk.
 - **Suggested review** — up to 20 reclaimable direct-child candidates ranked by
   allocated size, each with a suggested action.
+- **Applied** — only with `--apply`: status, trash directory, selected risks,
+  number of moved entries, reclaimed allocated bytes, each moved/skipped/failed
+  path and its reason, and a reminder to empty the Trash.
 - **Limitations** — the fixed caveat list.
 
 JSON output has `schema_version` (currently `1`):
@@ -169,6 +190,7 @@ JSON output has `schema_version` (currently `1`):
 | `top_files` | Array of `{path, size_bytes, allocated_bytes, modified_at, category, risk}` |
 | `reclaimable` | Array of `{path, size_bytes, allocated_bytes, category, risk, suggested_action, root_id}`; contains every direct-child candidate, while Markdown shows up to 20 |
 | `nested_roots_skipped` | Existing requested or known roots skipped because a parent root already covers them |
+| `apply` | Present only with `--apply`: `{status, trash_dir, selected_risks, moved, skipped, failed, reclaimed_allocated_bytes}`. `status` is `applied` when at least one path moved, otherwise `no-candidates` |
 | `summary` | `roots_scanned`, `total_bytes`, `total_allocated_bytes`, `files`, `low_risk_bytes`, `medium_risk_bytes`, `high_risk_bytes`; the risk totals are allocated bytes only |
 | `limitations` | Fixed list of limitation strings |
 
@@ -256,7 +278,7 @@ replaced, roots elided):
 - Only metadata was read: no file contents, credentials, session text or account data were read, stored or uploaded.
 - Directory symlinks are never followed, so linked roots and external volumes are not counted.
 - Known roots are discovery hints and may be version-specific; paths that do not exist are omitted.
-- The audit is read-only. It never deletes, moves, compresses or archives anything; every suggestion is a plan for the user.
+- The scan is read-only. `--apply --to-trash --confirm` moves selected low/medium risk paths into the trash directory; it never deletes them permanently, and high-risk paths are never moved.
 - Database and Git object sizes are reported for awareness only; deleting them directly can lose history or state.
 ```
 
@@ -267,6 +289,68 @@ database under the Codex home, plugin packages under Claude Code, and
 build/cache output under Xcode. The audit ranks and labels them; it does not
 decide that any of them should be removed.
 
+## Moving candidates to Trash (optional)
+
+The default command is read-only. A move happens only when all three explicit
+flags are present:
+
+```bash
+# Read-only preview: review the Suggested review list first.
+python3 <skill-root>/scripts/skill_atlas.py disk scan
+
+# Move low-risk direct-child candidates (the default risk set) to ~/.Trash.
+python3 <skill-root>/scripts/skill_atlas.py disk scan --apply --to-trash --confirm
+
+# Include medium-risk candidates and choose a different trash directory.
+python3 <skill-root>/scripts/skill_atlas.py disk scan --apply --to-trash --confirm \
+  --risk low --risk medium --trash-dir ~/.Trash
+```
+
+Rules:
+
+- **All three flags are required.** `--apply` without `--to-trash` is refused
+  ("permanent deletion is not supported"), and `--apply` without `--confirm` is
+  refused. A refused request exits with status 2 and moves nothing.
+- **Only direct-child candidates are moved.** The move step uses the scan's
+  `reclaimable` list (direct children of the scanned roots whose category is not
+  `other`) and only entries whose risk is selected by `--risk`. `--risk` may be
+  repeated; choices are `low` and `medium`, and the default is `low`.
+- **High-risk entries are never moved.** Databases, `.git` objects, and any
+  other `high` risk entry cannot be selected, so they stay where they are.
+  Symlinks are never moved either.
+- **Moves go to a trash directory with unique names.** The default destination
+  is `~/.Trash`; `--trash-dir` overrides it (mainly for tests and external
+  volumes) and the directory must already exist. If a name is taken, a
+  timestamp suffix is added instead of overwriting.
+- **No permanent deletion.** The tool never uses `rm -rf` and never deletes a
+  path permanently. A cross-volume move copies the data and then removes the
+  source, as `shutil.move` does.
+- **Space is freed only after the Trash is emptied.** Moving a file out of a
+  scanned root lowers the scan's totals, but the bytes are still on disk until
+  the Trash is emptied. The tool never empties the Trash.
+- **Failures are reported, not hidden.** Paths that no longer exist, overlap the
+  trash directory, or fail to move appear in `skipped` or `failed` with a
+  reason; the rest are moved or skipped independently.
+
+The JSON result gains an `apply` object only when `--apply` is used:
+`{status, trash_dir, selected_risks, moved, skipped, failed,
+reclaimed_allocated_bytes}`. Each `moved` item has `path`, `trash_path`,
+`size_bytes`, `allocated_bytes`, `category`, and `risk`; `skipped` and `failed`
+items add a `reason`. `reclaimed_allocated_bytes` sums the allocated bytes of
+moved paths only. Markdown adds an **Applied** section with the same facts and a
+reminder to empty the Trash.
+
+Safety before applying:
+
+1. Run the read-only scan and review the **Suggested review** list.
+2. Close tools that may be using the files; do not run cleanup while a tool is
+   writing to them.
+3. Use the default `--risk low` first. Add `--risk medium` only after reviewing
+   those candidates, because they include sessions, plugins, media, and archives.
+4. Check the **Applied** section and the Trash after the move. Restore anything
+   that was moved by mistake from the Trash, then empty it deliberately when
+   you are satisfied; emptying the Trash is what actually frees the space.
+
 ## Safety and privacy
 
 - **Metadata only.** The scan reads names, apparent and allocated sizes (the
@@ -274,8 +358,11 @@ decide that any of them should be removed.
   contents, credentials, session transcripts, account data or configuration
   values.
 - **No network.** Nothing is uploaded, and no remote service is contacted.
-- **No writes.** The audit never deletes, moves, compresses, archives, links or
-  repairs anything. Suggestions are text for a human review.
+- **Read-only by default; opt-in Trash moves.** Without all three of `--apply`,
+  `--to-trash`, and `--confirm`, the scan only reads metadata and writes nothing.
+  With all three, selected low/medium direct-child candidates are moved into the
+  trash directory via `shutil.move`; high-risk entries and symlinks are never
+  moved, nothing is permanently deleted, and `rm -rf` is never used.
 - **No symlink following during traversal.** Symlinked files and directories
   encountered while walking a root are skipped and counted, so linked trees and
   external volumes are not traversed. Paths you pass explicitly as `--home`,
@@ -284,9 +371,10 @@ decide that any of them should be removed.
 - **Sensitive paths.** Output contains absolute home and project paths, which can
   reveal which tools and projects you use. Redact paths before sharing scan
   output publicly or attaching it to an issue.
-- **Not a cleanup tool.** Use it to decide *what to review*; perform any cleanup
-  with the owning tool's own controls, after a backup, and with explicit user
-  authorization.
+- **Human review before applying.** Use the read-only scan to decide *what to
+  review*. Close tools that may be using the files, run cleanup only
+  deliberately, check the Applied section, and restore from the Trash rather
+  than deleting anything permanently. The tool never empties the Trash.
 
 ## Limitations
 
@@ -296,23 +384,32 @@ The fixed caveats in every result, restated:
    (`st_blocks × 512`) is the real disk usage; apparent size is what tools such
    as `du --apparent-size` show, and sparse files can have a huge apparent size
    with almost no allocation.
-2. **Only metadata was read.** No file contents, credentials, session text or
+2. **APFS compression, clones, snapshots and hard links can make the real
+   reclaimable space different from either size.** Deleting a path does not
+   always free all of its allocated blocks.
+3. **Only metadata was read.** No file contents, credentials, session text or
    account data were read, stored or uploaded.
-3. **Directory symlinks are never followed during traversal.** Linked roots and
+4. **Directory symlinks are never followed during traversal.** Linked roots and
    external volumes are not counted; only a root path passed explicitly is
    resolved before scanning.
-4. **Known roots are discovery hints.** They may be version-specific, and paths
+5. **Known roots are discovery hints.** They may be version-specific, and paths
    that do not exist are omitted.
-5. **The audit is read-only.** It never deletes, moves, compresses or archives
-   anything; every suggestion is a plan for the user.
-6. **Database and Git object sizes are reported for awareness only.** Deleting
-   them directly can lose history or state.
+6. **The default scan is read-only.** The fixed text says the audit never
+   deletes, moves, compresses or archives anything; when
+   `--apply --to-trash --confirm` is used, it moves the selected candidates into
+   Trash as described above and still never permanently deletes them.
+7. **Database and Git object sizes are reported for awareness only.** Deleting
+   them directly can lose history or state; cleanup never moves high-risk
+   entries.
 
 Additional practical caveats:
 
-- Allocated size is real allocation, not a promise of reclaimable space: APFS
-  clones, snapshots and hard links can share blocks, so deleting one path may
-  not free its full allocated size.
+- Space is freed only after the Trash is emptied. Moving files out of a scanned
+  root lowers the reported totals but does not release disk space by itself.
+- A cleanup request can refuse (missing flags, high-risk selection, missing
+  trash directory) or partially fail (permissions, cross-volume errors); check
+  `skipped` and `failed` in the `apply` result instead of assuming every path
+  moved.
 - Allocated size can be slightly larger than apparent size for many small
   files, because allocation happens in blocks.
 - Classification is name-based and can be wrong. Verify a candidate by opening
@@ -328,9 +425,11 @@ Additional practical caveats:
   directory's category.
 
 To act on a result, start with the **Suggested review** list, verify the owning
-tool and file age, back up anything that may matter, and use the tool's own
-prune, cache-clear or maintenance command. Never delete a database or `.git`
-objects directly.
+tool and file age, and back up anything that may matter. If you choose the
+opt-in cleanup, run `disk scan --apply --to-trash --confirm` deliberately
+(start with the default `--risk low`), inspect the **Applied** section, restore
+anything moved by mistake from the Trash, and empty the Trash yourself only when
+satisfied. Never delete a database or `.git` objects directly.
 
 ## Relation to the other read-only audits
 
@@ -341,7 +440,9 @@ objects directly.
   hashes project documents and flags nested roots. It answers "which copy is
   which?"; `disk scan --project .` adds a size view for one project but does not
   group copies, compare documents or recommend consolidation.
-- All three are read-only, run locally, and produce plans rather than changes.
-  A typical review is: `agents scan` to see the environment, `projects audit` to
-  understand copies, then `disk scan` to see where space goes before deciding
-  what to archive or prune with the owning tools.
+- All three are local and read-only by default. Only
+  `disk scan --apply --to-trash --confirm` changes anything, and it only moves
+  selected low/medium risk candidates to the Trash. A typical review is:
+  `agents scan` to see the environment, `projects audit` to understand copies,
+  then `disk scan` to see where space goes before deciding what to archive or
+  prune with the owning tools.

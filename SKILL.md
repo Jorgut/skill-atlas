@@ -94,11 +94,17 @@ Allocated size (`st_blocks × 512`) is the real disk usage and drives the
 threshold, sorting and risk totals; apparent size (`st_size`) can be much larger
 for sparse files. It reads metadata only: no file contents, credentials, session
 text, or account data; it never follows symlinks while walking, opens no network
-connection, and never deletes, moves, compresses, or archives anything.
+connection, and by default never moves or deletes anything. The opt-in
+`disk scan --apply --to-trash --confirm` (optional repeated `--risk low|medium`,
+default `low`) moves selected low/medium direct-child candidates into `~/.Trash`
+(or `--trash-dir`) with unique names. High-risk entries such as databases and
+`.git` objects and symlinks are never moved, `rm -rf` and permanent deletion are
+never used, and space is freed only after the Trash is emptied.
 Allocated size is not a promise of reclaimable space because clones, snapshots
 and hard links can share blocks, and database or Git objects must never be
 deleted directly. Read [docs/disk-scan.md](docs/disk-scan.md) for known roots,
-categories and risk, the JSON contract, limitations, and a worked example.
+categories and risk, the JSON contract, the opt-in cleanup rules, limitations,
+and a worked example.
 
 ## Agent Handoff Messages
 

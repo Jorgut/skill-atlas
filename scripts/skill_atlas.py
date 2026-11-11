@@ -925,7 +925,11 @@ def add_project_commands(subparsers: argparse._SubParsersAction) -> None:
 
 
 def handle_disk(args: argparse.Namespace) -> None:
-    result = disk_scan.run(args)
+    try:
+        result = disk_scan.run(args)
+    except disk_scan.DiskScanError as exc:
+        print(f"Skill Atlas disk scan refused: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
     if args.format == "json":
         json_print(result)
     else:
