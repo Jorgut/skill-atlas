@@ -14,6 +14,7 @@ from typing import Any
 
 import audit_skills
 import agent_handoff
+import agent_messages
 import handoff_advisor
 import feedback_loop
 import skill_creation
@@ -880,6 +881,28 @@ def add_agent_commands(subparsers: argparse._SubParsersAction) -> None:
         action.set_defaults(handler=handle_agent)
 
 
+def handle_message(args: argparse.Namespace) -> None:
+    try:
+        result = agent_messages.run(args)
+    except (agent_messages.MessageError, agent_handoff.HandoffError) as exc:
+        print(f"Skill Atlas message refused: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    if args.format == "json":
+        json_print(result)
+    else:
+        agent_messages.emit_markdown(result)
+
+
+def add_message_commands(subparsers: argparse._SubParsersAction) -> None:
+    message = subparsers.add_parser(
+        "message",
+        help="Queue, read and acknowledge local cross-agent handoff messages.",
+    )
+    agent_messages.add_arguments(message)
+    for action in message._subparsers._group_actions[0].choices.values():
+        action.set_defaults(handler=handle_message)
+
+
 def handle_closeout(args: argparse.Namespace) -> None:
     scripts = Path(__file__).resolve().parent.parent / "closeout" / "scripts"
     if args.action == "audit":
@@ -951,6 +974,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     add_monitor_commands(subparsers)
     add_market_commands(subparsers)
     add_agent_commands(subparsers)
+    add_message_commands(subparsers)
     add_handoff_advice_command(subparsers)
     add_feedback_commands(subparsers)
     add_closeout_commands(subparsers)
