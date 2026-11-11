@@ -68,7 +68,7 @@ Codex does not use the bundled Markdown slash-command adapter. In Codex, invoke 
 
 ## What It Does
 
-Skill Atlas exposes eight main workflows:
+Skill Atlas exposes nine main workflows:
 
 | Workflow | Purpose | Example |
 | --- | --- | --- |
@@ -79,6 +79,7 @@ Skill Atlas exposes eight main workflows:
 | `market` | Check public-market freshness or record a reviewed shared snapshot | `market status` |
 | `monitor` | Schedule recurring competitor research and compare completed snapshots | `monitor add closeout --interval monthly` |
 | `agents` | Report read-only local evidence for agent tools, rule roots, skill roots, and Skill Atlas copies | `agents scan --project .` |
+| `projects` | Find local project copies, group likely duplicates, and flag divergent project documents | `projects audit --root ~/Projects --depth 2` |
 | `message` | Relay optional compact handoff messages between local agents as files | `message send --task issue-28 --from Codex --to "Claude Code" --summary "Review the camera diff"` |
 
 Examples using the deterministic CLI:
@@ -95,6 +96,7 @@ python3 scripts/skill_atlas.py market refresh --category ui-ux
 python3 scripts/skill_atlas.py monitor add closeout --interval monthly
 python3 scripts/skill_atlas.py monitor due
 python3 scripts/skill_atlas.py agents scan --project .
+python3 scripts/skill_atlas.py projects audit --root ~/Projects --depth 2
 ```
 
 With `/skill-atlas` or `$skill-atlas`, the rest of the line is the request. Natural-language requests are also supported:
@@ -129,6 +131,17 @@ python3 scripts/skill_atlas.py agents scan --project . --format json
 ```
 
 The scan checks a reviewed catalog of coding-agent tools, their rule and skill roots, shared physical skill roots, executable-path hits, and local Skill Atlas copy versions (with a mismatch flag). It is read-only: it reads filesystem metadata and local `skill.json` manifests, never executes a tool, opens no network connection, reads no credentials or session data, and writes nothing. Levels are file-evidence only — `not-detected`, `detected`, `configured` — and never prove runtime loading; `configured` means documented configuration evidence exists, and candidate paths stay unverified hints. Treat the output as discovery evidence, not handoff verification, and redact absolute paths before sharing it. See [Local Agent Environment Scan](docs/agent-environments.md).
+
+### Duplicate project copies and divergent docs (read-only)
+
+When the same project may exist in several local directories, audit project roots and their agent-facing documents before choosing a canonical copy:
+
+```bash
+python3 scripts/skill_atlas.py projects audit --project . --project /path/to/other-copy
+python3 scripts/skill_atlas.py projects audit --root ~/Projects --depth 2 --format json
+```
+
+The audit discovers candidate project roots, groups likely-duplicate copies as confirmed (normalized git remote, compared case-insensitively) or probable (case-folded directory name), compares `AGENTS.md`/`CLAUDE.md`/`CONTEXT.md`/`PROJECT_STATE.md`/`PROJECT_INDEX.md`/`CODEBUDDY.md`/`.cursor/rules`/`.agent/rules` by SHA-256 up to 256 KiB without printing contents, and flags divergent documents and nested project roots. It is strictly read-only: it never runs git (parses `.git/config` and `.git/HEAD` by hand), never writes, moves, merges, archives, or deletes, and opens no network connection. Recommendations are plans with `requires_user_confirmation: true`; review the actual files before acting, and redact absolute paths and remote URLs before sharing output. See [Project Root and Duplicate Documentation Audit](docs/project-root-audit.md).
 
 ### Local agent handoff messages (optional)
 

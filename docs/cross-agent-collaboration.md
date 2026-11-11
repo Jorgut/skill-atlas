@@ -8,6 +8,8 @@ Identify the user's actual task, project root, relevant checkouts, participating
 
 For local file evidence before configuring anything, run the read-only `agents scan` command (`python3 scripts/skill_atlas.py agents scan --project .`). It checks a reviewed catalog of agent tools, their rule and skill roots, shared physical skill roots, and local Skill Atlas copy versions, then reports file-evidence levels (`not-detected`, `detected`, `configured`). The scan never executes a tool, opens a network connection, reads credentials or session data, or writes anything; `configured` is not proof of runtime loading, and candidate paths stay unverified hints. Treat the result as discovery evidence and confirm the tool's own current documentation before changing configuration. See [Local Agent Environment Scan](agent-environments.md).
 
+Before choosing a canonical checkout or reconciling project state, run the read-only `projects audit` command (`python3 scripts/skill_atlas.py projects audit --project . --project /path/to/other-copy`). It finds candidate project roots, groups likely-duplicate copies (normalized git remote = confirmed; case-folded directory name = probable), hashes agent-facing project documents without printing contents, and flags divergent documents and nested project roots. Its recommendations are plans only and require user confirmation; hashes prove difference, not which copy is authoritative. See [Project Root and Duplicate Documentation Audit](project-root-audit.md).
+
 Separate these responsibilities:
 
 | Layer | Purpose | Discovery examples |

@@ -20,6 +20,7 @@ Choose the workflow from the request:
 - recurring competitor comparison with historical differences: run monitor
 - cross-agent rules, project context, or handoff setup: read the cross-agent context workflow below
 - inspect which local agent tools, rule roots, skill roots, or Skill Atlas copies exist: run `agents scan` (read-only)
+- duplicated project copies, divergent `AGENTS.md`/`CLAUDE.md`/state docs, or nested project roots: run `projects audit` (read-only)
 - handing a compact review or action request to a local agent: read Agent Handoff Messages below
 - a downloaded or proposed third-party skill: run strict security review
 
@@ -60,6 +61,25 @@ and `--format json` for the full result. Read
 [docs/agent-environments.md](docs/agent-environments.md) for the catalog,
 evidence levels, output contract, limitations, and how to verify a tool. This
 is discovery evidence, not handoff verification.
+
+## Project Root and Duplicate Documentation Audit
+
+Use `projects audit` when asked which local project copies exist, whether
+duplicated checkouts diverge in their
+`AGENTS.md`/`CLAUDE.md`/`CONTEXT.md`/`PROJECT_STATE.md`, or whether one project
+is nested inside another. It discovers candidate roots by `.git` entries and
+discovery markers, groups likely duplicates as confirmed (normalized git remote,
+compared case-insensitively) or probable (case-folded directory name), compares
+the listed project documents by SHA-256 without printing their contents, and
+flags divergent documents and nested roots. These are evidence levels, not proof
+that copies are identical. The audit is read-only: it never runs git
+(`.git/config` and `.git/HEAD` are parsed by hand), never writes, moves, merges,
+archives, or deletes, never opens a network connection, and never prints
+document contents. Recommendations are plans with
+`requires_user_confirmation: true`; review the divergent documents before acting.
+Use repeated `--project`, `--root` with `--depth`, and `--format json`. Read
+[docs/project-root-audit.md](docs/project-root-audit.md) for identity rules, the
+256 KiB hash cap, recommendations, output contract, and a worked example.
 
 ## Agent Handoff Messages
 
@@ -120,6 +140,8 @@ skill-atlas
 │   └── remove     remove configuration while retaining snapshots
 ├── agents
 │   └── scan       read-only local evidence for agent tools, rules, and skills
+├── projects
+│   └── audit      read-only audit of project roots and duplicate project docs
 └── message
     ├── send       queue one compact handoff message for a local agent or person
     ├── inbox      list messages addressed to one agent; read-only
@@ -128,7 +150,7 @@ skill-atlas
     └── approve    record a person's approval before completion
 ```
 
-Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. The `message` actions write only under `.agent-state/messages/`; they do not contact another agent or modify project files. `message approve` records a person's local approval and must not be run on another person's behalf. `agents scan` reads filesystem metadata and local Skill Atlas manifests only; it never executes an agent tool and writes nothing. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
+Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. The `message` actions write only under `.agent-state/messages/`; they do not contact another agent or modify project files. `message approve` records a person's local approval and must not be run on another person's behalf. `agents scan` reads filesystem metadata and local Skill Atlas manifests only; it never executes an agent tool and writes nothing. `projects audit` reads metadata, small `.git` files, and documentation hashes only; it never runs git and writes nothing. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
 
 Agent command syntax varies. If a platform does not pass arguments after `$skill-atlas` or does not support dollar-prefixed skill calls, accept equivalent natural language such as "Use Skill Atlas manage" or "用 Skill Atlas 编排这个任务". Preserve these command meanings across platforms.
 
