@@ -142,13 +142,16 @@ python3 <skill-root>/scripts/skill_atlas.py disk scan --project . --format json
 
 Flags: `--home PATH` (known-root base, default user home), repeated
 `--root PATH`, `--project PATH`, `--top N` (default 15, bounded to 0–100),
-`--min-file-mb N` (default 200; files at or above), `--max-entries N` (default
-400000, per-root safety limit), and `--format markdown|json`. The scan reads
-metadata only, never follows symlinks while walking, and never deletes, moves,
-compresses, or archives anything; categories, risk levels, and suggested actions
-are name-based heuristics and plans, not cleanup. See [Disk Usage
-Audit](disk-scan.md) for known roots, categories, the JSON contract, and
-limitations.
+`--min-file-mb N` (default 200; files whose allocated size is at or above),
+`--max-entries N` (default 400000, per-root safety limit), and `--format
+markdown|json`. Sizes are reported as allocated bytes (`st_blocks × 512`, the
+real disk usage) with apparent bytes (`st_size`) in parentheses when they
+differ; the largest-files threshold, ordering, and risk totals use allocated
+bytes. The scan reads metadata only, never follows symlinks while walking, and
+never deletes, moves, compresses, or archives anything; categories, risk levels,
+and suggested actions are name-based heuristics and plans, not cleanup. See
+[Disk Usage Audit](disk-scan.md) for known roots, categories, the JSON contract,
+and limitations.
 
 ## Local agent messages
 

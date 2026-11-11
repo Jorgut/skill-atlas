@@ -88,13 +88,15 @@ Use `disk scan` when asked what agent work is using local disk space, or before
 cleaning large agent homes, caches, sessions, plugins, project media, build
 artifacts, or Git objects. It scans known agent roots under `--home`, plus
 repeated `--root` directories and one optional `--project`, and reports apparent
-sizes, file counts, categories, risk levels, largest files above `--min-file-mb`,
-and plan-only suggested actions. It reads metadata only: no file contents,
-credentials, session text, or account data; it never follows symlinks while
-walking, opens no network connection, and never deletes, moves, compresses, or
-archives anything.
-Sizes are apparent, so APFS compression, clones, snapshots, and hard links can
-change the real reclaimable space, and database or Git objects must never be
+and allocated sizes, file counts, categories, risk levels, largest files by
+allocated size at or above `--min-file-mb`, and plan-only suggested actions.
+Allocated size (`st_blocks × 512`) is the real disk usage and drives the
+threshold, sorting and risk totals; apparent size (`st_size`) can be much larger
+for sparse files. It reads metadata only: no file contents, credentials, session
+text, or account data; it never follows symlinks while walking, opens no network
+connection, and never deletes, moves, compresses, or archives anything.
+Allocated size is not a promise of reclaimable space because clones, snapshots
+and hard links can share blocks, and database or Git objects must never be
 deleted directly. Read [docs/disk-scan.md](docs/disk-scan.md) for known roots,
 categories and risk, the JSON contract, limitations, and a worked example.
 
