@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 460" role="img" aria-labelledby="title desc">
+  <title id="title">Skill Atlas copy roles</title>
+  <desc id="desc">One upstream Git repository is the source of truth. The source checkout stays on main. Each task uses its own worktree and branch, merged through a pull request. The installation copy is read-only and updated by fast-forward. Archived copies are frozen evidence.</desc>
+  <style>
+    .box { fill: #ffffff; stroke: #3b4252; stroke-width: 1.5; rx: 10; }
+    .accent { fill: #e8f4f0; stroke: #0f766e; stroke-width: 2; }
+    .frozen { fill: #f6f7f9; stroke: #6b7280; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .label { font: 600 15px -apple-system, "Segoe UI", sans-serif; fill: #1f2933; }
+    .small { font: 13px -apple-system, "Segoe UI", sans-serif; fill: #3b4252; }
+    .mono { font: 12.5px ui-monospace, "SF Mono", Menlo, monospace; fill: #1f2933; }
+    .note { font: 12px -apple-system, "Segoe UI", sans-serif; fill: #52606d; }
+    .arrow { stroke: #0f766e; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    .arrow-muted { stroke: #6b7280; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead-muted); stroke-dasharray: 5 4; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#0f766e"/>
+    </marker>
+    <marker id="arrowhead-muted" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="330" y="24" width="300" height="72" rx="10" class="accent"/>
+  <text x="480" y="52" text-anchor="middle" class="label">Upstream Git repository</text>
+  <text x="480" y="74" text-anchor="middle" class="mono">origin/main  (single source of truth)</text>
+
+  <rect x="70" y="150" width="250" height="96" rx="10" class="box"/>
+  <text x="195" y="178" text-anchor="middle" class="label">Source checkout</text>
+  <text x="195" y="200" text-anchor="middle" class="small">stays on main, clean</text>
+  <text x="195" y="222" text-anchor="middle" class="mono">~/repos/skill-atlas</text>
+
+  <rect x="370" y="150" width="220" height="96" rx="10" class="box"/>
+  <text x="480" y="178" text-anchor="middle" class="label">Worktree per task</text>
+  <text x="480" y="200" text-anchor="middle" class="small">one branch, one task</text>
+  <text x="480" y="222" text-anchor="middle" class="mono">feat/issue-42</text>
+
+  <rect x="640" y="150" width="250" height="96" rx="10" class="box"/>
+  <text x="765" y="178" text-anchor="middle" class="label">Pull request</text>
+  <text x="765" y="200" text-anchor="middle" class="small">review, CI, merge</text>
+  <text x="765" y="222" text-anchor="middle" class="mono">same origin, no copies</text>
+
+  <rect x="70" y="320" width="250" height="96" rx="10" class="box"/>
+  <text x="195" y="348" text-anchor="middle" class="label">Installation copy</text>
+  <text x="195" y="370" text-anchor="middle" class="small">read-only for agents</text>
+  <text x="195" y="392" text-anchor="middle" class="mono">fast-forward only</text>
+
+  <rect x="640" y="320" width="250" height="96" rx="10" class="frozen"/>
+  <text x="765" y="348" text-anchor="middle" class="label">Archive</text>
+  <text x="765" y="370" text-anchor="middle" class="small">frozen evidence, never loaded</text>
+  <text x="765" y="392" text-anchor="middle" class="mono">bundle + tar + checksums</text>
+
+  <path class="arrow" d="M195 150 L195 126 L330 126"/>
+  <text x="262" y="118" text-anchor="middle" class="note">fetch</text>
+
+  <path class="arrow" d="M480 96 L480 150"/>
+  <text x="492" y="126" class="note">create worktree</text>
+
+  <path class="arrow" d="M590 198 L640 198"/>
+  <text x="615" y="188" text-anchor="middle" class="note">push</text>
+
+  <path class="arrow" d="M765 150 L765 126 L630 126"/>
+  <text x="700" y="118" text-anchor="middle" class="note">merge</text>
+
+  <path class="arrow" d="M195 246 L195 320"/>
+  <text x="207" y="288" class="note">pull (ff only)</text>
+
+  <path class="arrow-muted" d="M480 246 L480 320 L640 320"/>
+  <text x="500" y="310" class="note">replaced copies frozen</text>
+
+  <text x="70" y="440" class="note">A symlinked skill entry does not add a role: it only points at one of these locations.</text>
+</svg>
