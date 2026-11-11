@@ -2,12 +2,20 @@
 
 `disk scan` is a read-only audit of the space that agent work produces locally:
 agent homes, session transcripts, caches, plugins, attachments, project media,
-build artifacts and Git objects. It was added in `0.9.0-beta`.
+build artifacts and Git objects. It was added in `0.9.0-beta`; since
+`0.9.1-beta` it reports both apparent and allocated sizes.
+
+Every result reports two sizes. **Allocated size** (`st_blocks × 512`) is the
+real disk usage; **apparent size** (`st_size`) is the logical file length and
+can be much larger for sparse files. When the two differ, sizes are printed as
+`<allocated> allocated (<apparent> apparent)`. The largest-files threshold,
+reclaimable ordering and risk totals all use allocated bytes.
 
 The audit reads file metadata only. It never reads file contents, credentials,
 session text or account data, never follows symlinks while walking a tree, never
-deletes or moves anything, and every suggestion is a plan for the user. Its job is to show where
-space goes and how risky each candidate is before anyone cleans anything up.
+deletes or moves anything, and every suggestion is a plan for the user. Its job
+is to show where space goes and how risky each candidate is before anyone
+cleans anything up.
 
 ## What the audit does and does not prove
 
@@ -15,18 +23,22 @@ The audit reports:
 
 - which known agent roots exist under `--home`, plus any repeated `--root`
   directories and one optional `--project` directory;
-- apparent sizes per root, per direct child entry, and per category;
-- the largest files at or above a size threshold (`--min-file-mb`, default
-  200 MB);
+- apparent and allocated sizes per root and per direct child entry, plus
+  allocated totals per category;
+- the largest files whose allocated size is at or above a size threshold
+  (`--min-file-mb`, default 200 MB);
 - a category and risk level for every reported entry;
 - a **suggested review** list with one suggested action per category; and
 - explicit limitations in every result.
 
 The audit does **not** prove:
 
-- how much disk space deleting an entry would actually free — reported sizes are
-  apparent file sizes, and compression, clones, snapshots and hard links can make
-  the real reclaimable space different;
+- how much disk space deleting an entry would actually free — allocated size is
+  real disk consumption, but APFS clones, snapshots, hard links and filesystem
+  behavior can still make reclaimable space differ;
+- which size is meaningful for a given file — allocated size shows disk
+  consumption, while apparent size shows logical length and can be far larger
+  for sparse files;
 - that a candidate is safe to remove — categories and risks are name-based
   heuristics, not an inspection of the data;
 - that a large file is unused, stale, or duplicated;
@@ -64,8 +76,8 @@ The command is safe to run repeatedly: it creates and changes no state.
 | `--home PATH` | Home directory whose known agent roots are audited. Defaults to the current user's home. |
 | `--root PATH` | Additional directory to audit. May be repeated. |
 | `--project PATH` | Optional project directory to include in the audit. |
-| `--top N` | Number of largest files to report (default 15; bounded to 0–100). |
-| `--min-file-mb N` | Report files at or above this size in MB (default 200). `0` includes every file size. |
+| `--top N` | Number of largest files to report, ranked by allocated size (default 15; bounded to 0–100). |
+| `--min-file-mb N` | Report files whose allocated size is at or above this size in MB (default 200). `0` includes every file size. |
 | `--max-entries N` | Per-root safety limit on filesystem entries (default 400000, minimum 1000). When hit, that root is marked truncated and its sizes are incomplete. |
 | `--format markdown\|json` | Markdown report (default) or the full result object. |
 
@@ -125,119 +137,122 @@ Risk levels mean:
   state. Back up first and use the owning tool's maintenance path.
 
 Only direct children of scanned roots become **suggested review** candidates
-(`other` is excluded). The summary's low/medium/high-risk byte totals are sums
-of those direct-child candidates, not of the whole disk and not of the largest
-files list. Every suggestion is plan-only text; the audit has no delete, move,
-compress or archive command.
+(`other` is excluded), ranked by allocated size. The summary's
+low/medium/high-risk byte totals are allocated-byte sums of those direct-child
+candidates, not of the whole disk and not of the largest files list. Every
+suggestion is plan-only text; the audit has no delete, move, compress or archive
+command.
 
 ## Reading the report
 
 Markdown output has these sections:
 
-- **Summary** — existing roots scanned, total apparent size, file count, and
-  low/medium/high-risk candidate totals.
+- **Summary** — existing roots scanned, total allocated size (with apparent size
+  when different), file count, and allocated low/medium/high-risk candidate
+  totals.
 - **Roots** — one `### <label> — <size>` block per existing root, with its path,
   file count, notes for truncated or unreadable entries, and up to the 8 largest
-  direct children with category and risk.
-- **Largest files** — files at or above `--min-file-mb`, up to `--top` entries,
-  with inherited category and risk.
-- **Suggested review** — up to 20 reclaimable direct-child candidates, each with
-  a suggested action.
+  direct children ranked by allocated size, with category and risk.
+- **Largest files** — files whose allocated size is at or above `--min-file-mb`,
+  up to `--top` entries, ranked and thresholded by allocated size, with inherited
+  category and risk.
+- **Suggested review** — up to 20 reclaimable direct-child candidates ranked by
+  allocated size, each with a suggested action.
 - **Limitations** — the fixed caveat list.
 
 JSON output has `schema_version` (currently `1`):
 
 | Key | Contents |
 |---|---|
-| `scan` | `home`, `project` (or `null`), `generated_at`, `top_files`, `min_file_mb` |
-| `roots` | Array of scanned roots: `id`, `label`, `evidence`, `source`, `path`, `exists`, `size_bytes`, `files`, `entries`, `categories`, `skipped`, `symlinks_skipped`, `truncated` |
-| `top_files` | Array of `{path, size_bytes, modified_at, category, risk}` |
-| `reclaimable` | Array of `{path, size_bytes, category, risk, suggested_action, root_id}`; contains every direct-child candidate, while Markdown shows up to 20 |
+| `scan` | `home`, `project` (or `null`), `generated_at`, `top_files`, `min_file_mb`, `min_file_basis` (`"allocated_bytes"`) |
+| `roots` | Array of scanned roots: `id`, `label`, `evidence`, `source`, `path`, `exists`, `size_bytes`, `allocated_bytes`, `files`, `entries`, `categories`, `skipped`, `symlinks_skipped`, `truncated` |
+| `top_files` | Array of `{path, size_bytes, allocated_bytes, modified_at, category, risk}` |
+| `reclaimable` | Array of `{path, size_bytes, allocated_bytes, category, risk, suggested_action, root_id}`; contains every direct-child candidate, while Markdown shows up to 20 |
 | `nested_roots_skipped` | Existing requested or known roots skipped because a parent root already covers them |
-| `summary` | `roots_scanned`, `total_bytes`, `files`, `low_risk_bytes`, `medium_risk_bytes`, `high_risk_bytes` |
+| `summary` | `roots_scanned`, `total_bytes`, `total_allocated_bytes`, `files`, `low_risk_bytes`, `medium_risk_bytes`, `high_risk_bytes`; the risk totals are allocated bytes only |
 | `limitations` | Fixed list of limitation strings |
 
 Root `entries` are direct children with `name`, `path`, `is_dir`, `size_bytes`,
-`files`, `category` and `risk`. `categories` aggregates the children's sizes by
-category. `skipped` counts unreadable entries; `symlinks_skipped` counts
-symlinks that were not followed.
+`allocated_bytes`, `files`, `category` and `risk`. `categories` aggregates the
+children's allocated bytes by category (`{category, allocated_bytes}`).
+`skipped` counts unreadable entries; `symlinks_skipped` counts symlinks that
+were not followed.
 
 ### Worked example output
 
-Sanitized excerpt from a real run on a development machine: paths are replaced
-with `/home/you`, and some root blocks are elided. This run found 8 existing
-roots, 275,644 files and a total apparent size of 23.1 GiB (24,773,799,062
-bytes, about 24.8 GB decimal).
+A run that added extra roots on the machine that motivated this change reported
+**96.9 GB apparent and 59.0 GB allocated across 10 roots**. Xcode developer data
+was the clearest sparse-file case: **38.25 GiB apparent but only 1.27 GiB
+allocated**. The report prints allocated size first whenever it differs from
+apparent size; this is a sanitized excerpt from another real run (paths
+replaced, roots elided):
 
 ```text
 # Disk scan
 
 - home: `/home/you`
-- generated: 2026-11-11T20:42:31.000792+00:00
+- generated: 2026-11-11T21:33:20.938118+00:00
 
 ## Summary
 
 - roots scanned: 8
-- total: 23.1 GiB
-- files: 275644
-- low-risk candidates: 2.3 GiB
-- medium-risk candidates: 15.5 GiB
+- total: 22.9 GiB allocated (22.3 GiB apparent)
+- files: 242428
+- low-risk candidates: 1.6 GiB
+- medium-risk candidates: 16.0 GiB
 - high-risk candidates: 3.7 GiB
 
 ## Roots
 
-### Codex home — 15.7 GiB
-
-- path: `/home/you/.codex`
-- files: 44853
-- `sessions` — 7.9 GiB (agent-session, medium risk)
-- `thread_history_1.sqlite` — 3.5 GiB (database, high risk)
-- `archived_sessions` — 916.2 MiB (agent-session, medium risk)
-- `packages` — 746.4 MiB (plugin-package, medium risk)
-- `visualizations` — 683.2 MiB (agent-cache, low risk)
-- `plugins` — 565.6 MiB (plugin-package, medium risk)
-- `generated_images` — 401.5 MiB (agent-cache, low risk)
-- `worktrees` — 294.3 MiB (other, medium risk)
-
-### Claude Code home — 2.9 GiB
+### Claude Code home — 3.3 GiB allocated (2.9 GiB apparent)
 
 - path: `/home/you/.claude`
 - files: 141644
-- `plugins` — 2.8 GiB (plugin-package, medium risk)
-- `transcripts` — 68.6 MiB (agent-session, medium risk)
-- `projects` — 62.8 MiB (agent-session, medium risk)
-- `skills` — 13.5 MiB (other, medium risk)
-- `cache` — 455.1 KiB (agent-cache, low risk)
+- `plugins` — 3.2 GiB allocated (2.8 GiB apparent) (plugin-package, medium risk)
+- `transcripts` — 71.3 MiB allocated (68.6 MiB apparent) (agent-session, medium risk)
+- `projects` — 62.8 MiB allocated (62.8 MiB apparent) (agent-session, medium risk)
+- `skills` — 14.8 MiB allocated (13.5 MiB apparent) (other, medium risk)
+...
+
+### Codex home — 14.9 GiB allocated (14.8 GiB apparent)
+
+- path: `/home/you/.codex`
+- files: 8793
+- `sessions` — 8.0 GiB allocated (7.9 GiB apparent) (agent-session, medium risk)
+- `thread_history_1.sqlite` — 3.5 GiB allocated (3.5 GiB apparent) (database, high risk)
+- `archived_sessions` — 916.7 MiB allocated (916.2 MiB apparent) (agent-session, medium risk)
+...
+
+### Xcode developer data — 1.3 GiB allocated (1.2 GiB apparent)
+
+- path: `/home/you/Library/Developer/Xcode`
+- files: 10953
+- `DerivedData` — 662.5 MiB allocated (649.3 MiB apparent) (build-artifact, low risk)
+- `CodingAssistant` — 513.0 MiB allocated (499.0 MiB apparent) (agent-cache, low risk)
 ...
 
 # ... other existing roots elided ...
 
 ## Largest files
 
-- `/home/you/.codex/thread_history_1.sqlite` — 3.5 GiB (database, high risk)
-- `/home/you/.codex/sessions/2026/11/03/rollout-...jsonl` — 1.1 GiB (agent-session, medium risk)
-- `/home/you/.codex/sessions/2026/08/05/rollout-...jsonl.zst` — 651.5 MiB (agent-session, medium risk)
-- `/home/you/.codex/sessions/2026/10/26/rollout-...jsonl` — 439.1 MiB (agent-session, medium risk)
-- `/home/you/.codex/plugins/.../codex` — 261.0 MiB (plugin-package, medium risk)
+- `/home/you/.codex/thread_history_1.sqlite` — 3.5 GiB allocated (3.5 GiB apparent) (database, high risk)
+- `/home/you/.codex/sessions/2026/11/03/rollout-...jsonl` — 1.1 GiB allocated (1.1 GiB apparent) (agent-session, medium risk)
+- `/home/you/.codex/sessions/2026/08/05/rollout-...jsonl.zst` — 651.5 MiB allocated (651.5 MiB apparent) (agent-session, medium risk)
 ...
 
 ## Suggested review
 
-- 7.9 GiB — agent-session / medium risk: `/home/you/.codex/sessions`
+- 8.0 GiB allocated (7.9 GiB apparent) — agent-session / medium risk: `/home/you/.codex/sessions`
   - Review age and keep what matters: archive old sessions elsewhere or prune them with the tool's own controls.
-- 3.5 GiB — database / high risk: `/home/you/.codex/thread_history_1.sqlite`
+- 3.5 GiB allocated (3.5 GiB apparent) — database / high risk: `/home/you/.codex/thread_history_1.sqlite`
   - Never delete: back it up first and consider the tool's own maintenance command (for example VACUUM).
-- 2.8 GiB — plugin-package / medium risk: `/home/you/.claude/plugins`
+- 3.2 GiB allocated (2.8 GiB apparent) — plugin-package / medium risk: `/home/you/.claude/plugins`
   - Plugins and package caches are usually reinstallable; check for local development plugins first.
-- 1.6 GiB — plugin-package / medium risk: `/home/you/.cursor/extensions`
-  - Plugins and package caches are usually reinstallable; check for local development plugins first.
-- 916.2 MiB — agent-session / medium risk: `/home/you/.codex/archived_sessions`
-  - Review age and keep what matters: archive old sessions elsewhere or prune them with the tool's own controls.
 ...
 
 ## Limitations
 
-- Sizes are apparent file sizes; APFS compression, clones, snapshots and hard links can change the real reclaimable space.
+- Both apparent and allocated sizes are reported. Allocated size (st_blocks x 512) is the real disk usage; apparent size is what tools such as du --apparent-size show, and sparse files can have a huge apparent size with almost no allocation.
 - Only metadata was read: no file contents, credentials, session text or account data were read, stored or uploaded.
 - Directory symlinks are never followed, so linked roots and external volumes are not counted.
 - Known roots are discovery hints and may be version-specific; paths that do not exist are omitted.
@@ -245,16 +260,19 @@ bytes, about 24.8 GB decimal).
 - Database and Git object sizes are reported for awareness only; deleting them directly can lose history or state.
 ```
 
-The largest entries are sessions and a database under the Codex home, plugin
-packages under Claude Code and Cursor, and build/cache output under Xcode. The
-audit ranks and labels them; it does not decide that any of them should be
-removed.
+In this excerpt the allocated total is slightly larger than apparent because many
+small files round up to whole blocks; sparse-file workloads show the opposite,
+sometimes by orders of magnitude. The largest entries are sessions and a
+database under the Codex home, plugin packages under Claude Code, and
+build/cache output under Xcode. The audit ranks and labels them; it does not
+decide that any of them should be removed.
 
 ## Safety and privacy
 
-- **Metadata only.** The scan reads names, sizes and modification times. It does
-  not read file contents, credentials, session transcripts, account data or
-  configuration values.
+- **Metadata only.** The scan reads names, apparent and allocated sizes (the
+  latter from block counts), and modification times. It does not read file
+  contents, credentials, session transcripts, account data or configuration
+  values.
 - **No network.** Nothing is uploaded, and no remote service is contacted.
 - **No writes.** The audit never deletes, moves, compresses, archives, links or
   repairs anything. Suggestions are text for a human review.
@@ -274,9 +292,10 @@ removed.
 
 The fixed caveats in every result, restated:
 
-1. **Sizes are apparent file sizes.** APFS compression, clones, snapshots and
-   hard links can change the real reclaimable space; the total is not a promise
-   of what deletion would free.
+1. **Both apparent and allocated sizes are reported.** Allocated size
+   (`st_blocks × 512`) is the real disk usage; apparent size is what tools such
+   as `du --apparent-size` show, and sparse files can have a huge apparent size
+   with almost no allocation.
 2. **Only metadata was read.** No file contents, credentials, session text or
    account data were read, stored or uploaded.
 3. **Directory symlinks are never followed during traversal.** Linked roots and
@@ -291,13 +310,19 @@ The fixed caveats in every result, restated:
 
 Additional practical caveats:
 
+- Allocated size is real allocation, not a promise of reclaimable space: APFS
+  clones, snapshots and hard links can share blocks, so deleting one path may
+  not free its full allocated size.
+- Allocated size can be slightly larger than apparent size for many small
+  files, because allocation happens in blocks.
 - Classification is name-based and can be wrong. Verify a candidate by opening
   its directory and checking the owning tool's documentation before acting.
 - A per-root entry limit (`--max-entries`, default 400000) can mark a large root
   `truncated`; its sizes are then incomplete.
-- The largest-files list only includes files at or above `--min-file-mb`, and
-  only files encountered during the scan; symlinks and unreadable entries are
-  not included.
+- The largest-files list only includes files whose allocated size is at or above
+  `--min-file-mb`, and only files encountered during the scan; symlinks and
+  unreadable entries are not included. A file with a large apparent size but
+  little allocation may therefore not appear.
 - Top-file categories are inherited from the nearest meaningful parent
   directory, so a large file inside a classified directory can carry that
   directory's category.

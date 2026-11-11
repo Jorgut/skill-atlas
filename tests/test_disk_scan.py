@@ -38,11 +38,14 @@ class DiskScanTests(unittest.TestCase):
         self.project = self.root / "project"
         self.project.mkdir()
 
-    def make_file(self, relative: str, size: int, base: Path | None = None) -> Path:
+    def make_file(self, relative: str, size: int, base: Path | None = None, sparse: bool = False) -> Path:
         path = (base or self.home) / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("wb") as stream:
-            stream.truncate(size)
+            if sparse:
+                stream.truncate(size)
+            else:
+                stream.write(b"\0" * size)
         return path
 
     def scan(self, **overrides):
@@ -162,6 +165,18 @@ class DiskScanTests(unittest.TestCase):
         self.assertEqual(result["roots"], [])
         self.assertEqual(result["summary"]["total_bytes"], 0)
 
+    def test_sparse_files_do_not_inflate_allocated_size(self) -> None:
+        self.make_file("media/sparse.bin", 50 * 1024 * 1024, self.project, sparse=True)
+        self.make_file("media/real.bin", 2 * 1024 * 1024, self.project)
+        result = self.scan(min_file_mb=1.0)
+        project = self.root_by_id(result, "project")
+        self.assertGreater(project["size_bytes"], project["allocated_bytes"])
+        self.assertLess(project["allocated_bytes"], 10 * 1024 * 1024)
+        names = [Path(item["path"]).name for item in result["top_files"]]
+        self.assertIn("real.bin", names)
+        self.assertNotIn("sparse.bin", names)
+        self.assertIn("allocated_bytes", result["top_files"][0])
+
     def test_scan_is_read_only(self) -> None:
         self.make_file(".codex/sessions/a.jsonl", 2 * 1024 * 1024)
         self.make_file("media/a.wav", 2 * 1024 * 1024, self.project)
@@ -183,7 +198,7 @@ class DiskScanTests(unittest.TestCase):
         result = self.scan()
         for key in ("schema_version", "scan", "roots", "top_files", "reclaimable", "summary", "limitations"):
             self.assertIn(key, result)
-        for key in ("roots_scanned", "total_bytes", "files", "low_risk_bytes", "medium_risk_bytes", "high_risk_bytes"):
+        for key in ("roots_scanned", "total_bytes", "total_allocated_bytes", "files", "low_risk_bytes", "medium_risk_bytes", "high_risk_bytes"):
             self.assertIn(key, result["summary"])
         buffer = StringIO()
         with redirect_stdout(buffer):

@@ -7,9 +7,11 @@ session text), never follows directory symlinks, never deletes or moves
 anything, and labels every candidate with a risk level and a suggested action.
 
 Default scope is a set of known agent homes below the scanned home directory,
-plus optional ``--root`` and ``--project`` paths. Sizes are apparent file sizes;
-APFS compression, clones, snapshots and hard links can make the real space
-different, which every result states in its limitations.
+plus optional ``--root`` and ``--project`` paths. Both apparent (``st_size``)
+and allocated (``st_blocks x 512``) sizes are reported; allocated size is the
+real disk usage, while sparse files can have a much larger apparent size. APFS
+clones, snapshots and hard links can still mean that deleting a path does not
+free all of its allocated blocks, which every result states in its limitations.
 """
 
 from __future__ import annotations
@@ -172,6 +174,20 @@ def _human(size: int | float) -> str:
     return f"{value:.1f} TiB"
 
 
+def _stat_sizes(stat: os.stat_result) -> tuple[int, int]:
+    """Return (apparent size, allocated size) for one file."""
+    apparent = int(stat.st_size)
+    blocks = getattr(stat, "st_blocks", None)
+    allocated = int(blocks) * 512 if isinstance(blocks, int) else apparent
+    return apparent, max(0, allocated)
+
+
+def _human_pair(apparent: int | float, allocated: int | float) -> str:
+    if allocated == apparent:
+        return _human(allocated)
+    return f"{_human(allocated)} allocated ({_human(apparent)} apparent)"
+
+
 def classify_name(name: str, is_dir: bool, inside_git: bool = False) -> str:
     """Classify one entry by its name, never by reading its contents."""
     lowered = name.casefold()
@@ -221,9 +237,10 @@ def _walk_files(
     state: dict[str, Any],
     min_file_bytes: int,
     candidates: list[dict[str, Any]],
-) -> tuple[int, int]:
-    """Walk a tree, collecting large files and the total apparent size."""
-    size = 0
+) -> tuple[int, int, int]:
+    """Walk a tree, collecting large files and apparent + allocated sizes."""
+    apparent_total = 0
+    allocated_total = 0
     files = 0
     stack = [path]
     while stack:
@@ -236,7 +253,7 @@ def _walk_files(
         for entry in entries:
             if state["entries"] >= max_entries:
                 state["truncated"] = True
-                return size, files
+                return apparent_total, allocated_total, files
             state["entries"] += 1
             try:
                 if entry.is_symlink():
@@ -246,13 +263,16 @@ def _walk_files(
                     stack.append(Path(entry.path))
                 elif entry.is_file(follow_symlinks=False):
                     stat = entry.stat(follow_symlinks=False)
-                    size += stat.st_size
+                    apparent, allocated = _stat_sizes(stat)
+                    apparent_total += apparent
+                    allocated_total += allocated
                     files += 1
-                    if stat.st_size >= min_file_bytes:
+                    if allocated >= min_file_bytes:
                         candidates.append(
                             {
                                 "path": _posix(Path(entry.path)),
-                                "size_bytes": stat.st_size,
+                                "size_bytes": apparent,
+                                "allocated_bytes": allocated,
                                 "modified_at": datetime.fromtimestamp(
                                     stat.st_mtime, timezone.utc
                                 ).isoformat(),
@@ -261,20 +281,21 @@ def _walk_files(
                         )
             except OSError:
                 state["skipped"] += 1
-    return size, files
+    return apparent_total, allocated_total, files
 
 
 def _root_entries(
     root: Path, *, max_entries: int, min_file_bytes: int, candidates: list[dict[str, Any]]
-) -> tuple[list[dict[str, Any]], int, int, dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], int, int, int, dict[str, Any]]:
     state = {"entries": 0, "skipped": 0, "symlinks": 0, "truncated": False}
     children: list[dict[str, Any]] = []
     total = 0
+    allocated_total = 0
     files = 0
     try:
         direct = list(os.scandir(root))
     except OSError:
-        return [], 0, 0, state
+        return [], 0, 0, 0, state
     for entry in direct:
         path = Path(entry.path)
         try:
@@ -282,7 +303,7 @@ def _root_entries(
                 state["symlinks"] += 1
                 continue
             if entry.is_dir(follow_symlinks=False):
-                child_size, child_files = _walk_files(
+                child_size, child_allocated, child_files = _walk_files(
                     path,
                     max_entries=max_entries,
                     state=state,
@@ -291,12 +312,14 @@ def _root_entries(
                 )
             elif entry.is_file(follow_symlinks=False):
                 stat = entry.stat(follow_symlinks=False)
-                child_size, child_files = stat.st_size, 1
-                if stat.st_size >= min_file_bytes:
+                child_size, child_allocated = _stat_sizes(stat)
+                child_files = 1
+                if child_allocated >= min_file_bytes:
                     candidates.append(
                         {
                             "path": _posix(path),
-                            "size_bytes": stat.st_size,
+                            "size_bytes": child_size,
+                            "allocated_bytes": child_allocated,
                             "modified_at": datetime.fromtimestamp(
                                 stat.st_mtime, timezone.utc
                             ).isoformat(),
@@ -309,6 +332,7 @@ def _root_entries(
             state["skipped"] += 1
             continue
         total += child_size
+        allocated_total += child_allocated
         files += child_files
         category = classify_name(
             entry.name, entry.is_dir(follow_symlinks=False), ".git" in path.parts
@@ -319,13 +343,14 @@ def _root_entries(
                 "path": _posix(path),
                 "is_dir": entry.is_dir(follow_symlinks=False),
                 "size_bytes": child_size,
+                "allocated_bytes": child_allocated,
                 "files": child_files,
                 "category": category,
                 "risk": CATEGORY_RISK.get(category, RISK_MEDIUM),
             }
         )
-    children.sort(key=lambda item: item["size_bytes"], reverse=True)
-    return children, total, files, state
+    children.sort(key=lambda item: item["allocated_bytes"], reverse=True)
+    return children, total, allocated_total, files, state
 
 
 def _dedupe_roots(paths: Iterable[Path]) -> list[Path]:
@@ -405,13 +430,13 @@ def scan(
 
     for path in unique_paths:
         meta = meta_for[_posix(path)]
-        children, total, files, state = _root_entries(
+        children, total, total_allocated, files, state = _root_entries(
             path, max_entries=max_entries, min_file_bytes=min_file_bytes, candidates=candidates
         )
         category_totals: dict[str, int] = {}
         for child in children:
             category_totals[child["category"]] = (
-                category_totals.get(child["category"], 0) + child["size_bytes"]
+                category_totals.get(child["category"], 0) + child["allocated_bytes"]
             )
         root_specs.append(
             {
@@ -419,10 +444,11 @@ def scan(
                 "path": _posix(path),
                 "exists": True,
                 "size_bytes": total,
+                "allocated_bytes": total_allocated,
                 "files": files,
                 "entries": children,
                 "categories": [
-                    {"category": category, "size_bytes": size}
+                    {"category": category, "allocated_bytes": size}
                     for category, size in sorted(
                         category_totals.items(), key=lambda item: item[1], reverse=True
                     )
@@ -433,7 +459,7 @@ def scan(
             }
         )
 
-    candidates.sort(key=lambda item: item["size_bytes"], reverse=True)
+    candidates.sort(key=lambda item: item["allocated_bytes"], reverse=True)
     top = candidates[:top_files]
     for item in top:
         category = classify_path(Path(item["path"]))
@@ -450,17 +476,18 @@ def scan(
                 {
                     "path": child["path"],
                     "size_bytes": child["size_bytes"],
+                    "allocated_bytes": child["allocated_bytes"],
                     "category": child["category"],
                     "risk": child["risk"],
                     "suggested_action": CATEGORY_ACTION[child["category"]],
                     "root_id": root["id"],
                 }
             )
-    reclaimable.sort(key=lambda item: item["size_bytes"], reverse=True)
+    reclaimable.sort(key=lambda item: item["allocated_bytes"], reverse=True)
 
     risk_totals = {RISK_LOW: 0, RISK_MEDIUM: 0, RISK_HIGH: 0}
     for item in reclaimable:
-        risk_totals[item["risk"]] = risk_totals.get(item["risk"], 0) + item["size_bytes"]
+        risk_totals[item["risk"]] = risk_totals.get(item["risk"], 0) + item["allocated_bytes"]
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -470,6 +497,7 @@ def scan(
             "generated_at": utc_now().isoformat(),
             "top_files": top_files,
             "min_file_mb": float(min_file_mb),
+            "min_file_basis": "allocated_bytes",
         },
         "roots": root_specs,
         "top_files": top,
@@ -478,13 +506,15 @@ def scan(
         "summary": {
             "roots_scanned": len(root_specs),
             "total_bytes": sum(root["size_bytes"] for root in root_specs),
+            "total_allocated_bytes": sum(root["allocated_bytes"] for root in root_specs),
             "files": sum(root["files"] for root in root_specs),
             "low_risk_bytes": risk_totals.get(RISK_LOW, 0),
             "medium_risk_bytes": risk_totals.get(RISK_MEDIUM, 0),
             "high_risk_bytes": risk_totals.get(RISK_HIGH, 0),
         },
         "limitations": [
-            "Sizes are apparent file sizes; APFS compression, clones, snapshots and hard links can change the real reclaimable space.",
+            "Both apparent and allocated sizes are reported. Allocated size (st_blocks x 512) is the real disk usage; apparent size is what tools such as du --apparent-size show, and sparse files can have a huge apparent size with almost no allocation.",
+            "APFS compression, clones, snapshots and hard links can make the real reclaimable space different from either size; deleting a path does not always free all of its allocated blocks.",
             "Only metadata was read: no file contents, credentials, session text or account data were read, stored or uploaded.",
             "Directory symlinks are never followed, so linked roots and external volumes are not counted.",
             "Known roots are discovery hints and may be version-specific; paths that do not exist are omitted.",
@@ -513,7 +543,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _emit_root(root: dict[str, Any]) -> None:
-    print(f"### {root['label']} — {_human(root['size_bytes'])}")
+    print(f"### {root['label']} — {_human_pair(root['size_bytes'], root['allocated_bytes'])}")
     print()
     print(f"- path: `{root['path']}`")
     print(f"- files: {root['files']}")
@@ -523,7 +553,7 @@ def _emit_root(root: dict[str, Any]) -> None:
         print(f"- note: {root['skipped']} entries could not be read")
     for child in root["entries"][:8]:
         print(
-            f"- `{child['name']}` — {_human(child['size_bytes'])} "
+            f"- `{child['name']}` — {_human_pair(child['size_bytes'], child['allocated_bytes'])} "
             f"({child['category']}, {child['risk']} risk)"
         )
     print()
@@ -541,7 +571,7 @@ def emit_markdown(result: dict[str, Any]) -> None:
     print("## Summary")
     print()
     print(f"- roots scanned: {summary['roots_scanned']}")
-    print(f"- total: {_human(summary['total_bytes'])}")
+    print(f"- total: {_human_pair(summary['total_bytes'], summary['total_allocated_bytes'])}")
     print(f"- files: {summary['files']}")
     print(f"- low-risk candidates: {_human(summary['low_risk_bytes'])}")
     print(f"- medium-risk candidates: {_human(summary['medium_risk_bytes'])}")
@@ -556,7 +586,7 @@ def emit_markdown(result: dict[str, Any]) -> None:
     if result["top_files"]:
         for item in result["top_files"]:
             print(
-                f"- `{item['path']}` — {_human(item['size_bytes'])} "
+                f"- `{item['path']}` — {_human_pair(item['size_bytes'], item['allocated_bytes'])} "
                 f"({item['category']}, {item['risk']} risk)"
             )
     else:
@@ -567,7 +597,7 @@ def emit_markdown(result: dict[str, Any]) -> None:
     if result["reclaimable"]:
         for item in result["reclaimable"][:20]:
             print(
-                f"- {_human(item['size_bytes'])} — {item['category']} / "
+                f"- {_human_pair(item['size_bytes'], item['allocated_bytes'])} — {item['category']} / "
                 f"{item['risk']} risk: `{item['path']}`"
             )
             print(f"  - {item['suggested_action']}")
@@ -590,12 +620,12 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--project", help="Project directory to include in the audit.")
     parser.add_argument("--top", type=int, default=DEFAULT_TOP_FILES,
-                        help="Largest files to report (default 15).")
+                        help="Largest files to report after sorting by allocated size (default 15).")
     parser.add_argument(
         "--min-file-mb",
         type=float,
         default=DEFAULT_MIN_FILE_MB,
-        help="Report files at or above this size in MB (default 200).",
+        help="Report files whose allocated size is at or above this MB threshold (default 200).",
     )
     parser.add_argument("--max-entries", type=int, default=DEFAULT_MAX_ENTRIES,
                         help="Stop after this many filesystem entries (safety limit).")

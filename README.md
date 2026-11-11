@@ -264,7 +264,7 @@ python3 scripts/skill_atlas.py disk scan \
 python3 scripts/skill_atlas.py disk scan --project . --format json
 ```
 
-It reports apparent sizes, categories, risk levels (low/medium/high), largest files, and a suggested review list with plan-only actions. It reads metadata only: not file contents, credentials, or session text. It never follows symlinks while walking a tree, and never deletes, moves, compresses, or archives anything. Sizes are apparent, so APFS compression, clones, snapshots, and hard links can make reclaimable space differ, and databases or `.git` objects must not be deleted directly. Review before acting; see [Disk Usage Audit](docs/disk-scan.md).
+It reports both apparent and allocated sizes, categories, risk levels (low/medium/high), largest files by allocated size, and a suggested review list with plan-only actions. Allocated size (`st_blocks Ã— 512`) is the real disk usage; apparent size (`st_size`) is the logical file length and can be far larger for sparse files, so file selection, ordering and risk totals use allocated bytes, and sizes are shown as `allocated (apparent)` when they differ. It reads metadata only: not file contents, credentials, or session text. It never follows symlinks while walking a tree, and never deletes, moves, compresses, or archives anything. Allocated size is not a promise of reclaimable space because clones, snapshots and hard links can share blocks, and databases or `.git` objects must not be deleted directly. Review before acting; see [Disk Usage Audit](docs/disk-scan.md).
 
 ## Start here
 
@@ -591,4 +591,4 @@ For the recommended local checkout, worktree, installation and archive layout â€
 
 ## Status
 
-Skill Atlas is currently `0.9.0-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.9.1-beta`. Interfaces and platform adapters may change before the stable release.
