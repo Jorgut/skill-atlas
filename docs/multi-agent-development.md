@@ -34,6 +34,21 @@ Success criteria:
 - No automatic push, destructive cleanup, credential reads, provider switching,
   or unsupported usage-limit assumptions.
 
+## Stage 1.5: local message transport
+
+A first message-transport slice is now implemented as the opt-in `message`
+command group: compact handoff envelopes are stored per task under
+`.agent-state/messages/<task>/`, with immutable envelopes, append-only
+receipts, explicit recipient acknowledgements (`taken`, `completed`,
+`refused`), a default 24-hour TTL, a 10-pass chain limit, and a human approval
+gate for messages sent with `--requires-approval`. It never sends network
+traffic, never notifies or starts another agent, and never claims delivery.
+See [Agent Handoff Messages](agent-messaging.md).
+
+This is transport only. It is **not** the Stage 2 orchestrator: there is still
+no durable task queue, task ownership transfer, worktree isolation, provider
+adapter, quota/error handling, or automatic dispatch.
+
 ## Stage 2: optional agent orchestrator
 
 **Not implemented yet.** After Stage 1 is validated with real agents:

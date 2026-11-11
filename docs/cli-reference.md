@@ -84,3 +84,32 @@ Review default local user skill roots:
 ```bash
 python3 <skill-root>/scripts/security_review_skills.py --format markdown
 ```
+
+## Local agent messages
+
+The unified CLI includes an optional `message` group for compact cross-agent
+handoff notes. All actions accept `--project` and `--task`; Markdown is the
+default output and `--format json` returns the full result object.
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py message send --project . --task issue-28 \
+  --from Codex --to "Claude Code" --summary "Review the camera diff" \
+  --conclusion "Camera works; selection remains" --evidence src/camera.ts \
+  --requires-approval --request-id review-28-1
+
+python3 <skill-root>/scripts/skill_atlas.py message inbox --project . --task issue-28 \
+  --agent "Claude Code"
+python3 <skill-root>/scripts/skill_atlas.py message show --project . --task issue-28 \
+  --id <message-id>
+python3 <skill-root>/scripts/skill_atlas.py message ack --project . --task issue-28 \
+  --id <message-id> --agent "Claude Code" --status taken --note "reviewing"
+python3 <skill-root>/scripts/skill_atlas.py message approve --project . --task issue-28 \
+  --id <message-id> --by "AJ" --note "review approved"
+```
+
+This is local file transport under `.agent-state/messages/<task>/`. It sends
+nothing over the network, does not notify or start the recipient, and refuses
+to record `completed` for a `--requires-approval` message until a person
+approves it. Keep `.agent-state/messages/` uncommitted and never place
+secrets in a payload. See [Agent Handoff Messages](agent-messaging.md) for states, data
+layout, limits, and a worked example.
