@@ -375,6 +375,8 @@ python3 -m unittest discover -s tests -v
 
 See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, discovery policy, security gates, and CLI reference.
 
+For the recommended local checkout, worktree, installation and archive layout — and the same rules for every agent tool — see [Installation and Development Layout](docs/development-layout.md).
+
 ## Status
 
 Skill Atlas is currently `0.8.0-beta`. Interfaces and platform adapters may change before the stable release.
