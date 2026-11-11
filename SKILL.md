@@ -1,6 +1,6 @@
 ---
 name: skill-atlas
-description: "Manage agent skills across platforms: inventory, duplicates, upstream evidence, safe updates, public alternatives, task/model/tool recommendations, and multi-skill orchestration. Use also to configure shared rules, per-project context, cross-agent handoff, and optional local cross-agent messages. Read-only by default; apply changes only within explicit user authorization."
+description: "Manage agent skills across platforms: inventory, duplicates, upstream evidence, safe updates, public alternatives, task/model/tool recommendations, and multi-skill orchestration. Use also to configure shared rules, per-project context, cross-agent handoff, read-only local agent environment scanning, and optional local cross-agent messages. Read-only by default; apply changes only within explicit user authorization."
 ---
 
 # Skill Atlas
@@ -19,6 +19,7 @@ Choose the workflow from the request:
 - public-market freshness or a reviewed shared market snapshot: run market
 - recurring competitor comparison with historical differences: run monitor
 - cross-agent rules, project context, or handoff setup: read the cross-agent context workflow below
+- inspect which local agent tools, rule roots, skill roots, or Skill Atlas copies exist: run `agents scan` (read-only)
 - handing a compact review or action request to a local agent: read Agent Handoff Messages below
 - a downloaded or proposed third-party skill: run strict security review
 
@@ -43,6 +44,22 @@ When asked to connect agent tools, organize per-project memory, or verify shared
 For WorkBuddy setup, read the WorkBuddy adapter discovery section in that guide; verify its effective rules root, project-guidance precedence, account scope, and loading conditions.
 
 Reusable public starting points are available in [templates/README.md](templates/README.md): general rules, project rules, and project context. Adapt them to verified tool/project requirements without publishing private records.
+
+## Local Agent Environment Scan
+
+Use `agents scan` when asked which coding-agent tools leave evidence on this
+machine, where their rule and skill roots are, or whether local Skill Atlas
+copies disagree on a version. The scan is read-only: it inspects filesystem
+metadata and local `skill.json` manifests, never executes a tool, opens no
+network connection, reads no credentials or session data, and writes nothing.
+Levels are file-evidence only: `not-detected`, `detected`, or `configured`. A
+`configured` result is not proof of runtime loading, and only paths documented
+in this repository can reach it; candidate paths and home overrides stay
+unverified hints. Use `--project .` to report project-scoped rule candidates
+and `--format json` for the full result. Read
+[docs/agent-environments.md](docs/agent-environments.md) for the catalog,
+evidence levels, output contract, limitations, and how to verify a tool. This
+is discovery evidence, not handoff verification.
 
 ## Agent Handoff Messages
 
@@ -101,6 +118,8 @@ skill-atlas
 │   ├── run        create a research packet or record reviewed results
 │   ├── history    compare saved snapshots over time
 │   └── remove     remove configuration while retaining snapshots
+├── agents
+│   └── scan       read-only local evidence for agent tools, rules, and skills
 └── message
     ├── send       queue one compact handoff message for a local agent or person
     ├── inbox      list messages addressed to one agent; read-only
@@ -109,7 +128,7 @@ skill-atlas
     └── approve    record a person's approval before completion
 ```
 
-Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. The `message` actions write only under `.agent-state/messages/`; they do not contact another agent or modify project files. `message approve` records a person's local approval and must not be run on another person's behalf. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
+Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. The `message` actions write only under `.agent-state/messages/`; they do not contact another agent or modify project files. `message approve` records a person's local approval and must not be run on another person's behalf. `agents scan` reads filesystem metadata and local Skill Atlas manifests only; it never executes an agent tool and writes nothing. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
 
 Agent command syntax varies. If a platform does not pass arguments after `$skill-atlas` or does not support dollar-prefixed skill calls, accept equivalent natural language such as "Use Skill Atlas manage" or "用 Skill Atlas 编排这个任务". Preserve these command meanings across platforms.
 
