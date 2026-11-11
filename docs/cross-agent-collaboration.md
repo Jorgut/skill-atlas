@@ -6,6 +6,8 @@ Use this workflow when configuring cooperation across agent tools, diagnosing mi
 
 Identify the user's actual task, project root, relevant checkouts, participating tools, and their configured instruction sources. Inspect existing rules and state before proposing additions. A tool name, installed skill, symlink, or similarly named repository is not evidence of a working context handoff.
 
+For local file evidence before configuring anything, run the read-only `agents scan` command (`python3 scripts/skill_atlas.py agents scan --project .`). It checks a reviewed catalog of agent tools, their rule and skill roots, shared physical skill roots, and local Skill Atlas copy versions, then reports file-evidence levels (`not-detected`, `detected`, `configured`). The scan never executes a tool, opens a network connection, reads credentials or session data, or writes anything; `configured` is not proof of runtime loading, and candidate paths stay unverified hints. Treat the result as discovery evidence and confirm the tool's own current documentation before changing configuration. See [Local Agent Environment Scan](agent-environments.md).
+
 Separate these responsibilities:
 
 | Layer | Purpose | Discovery examples |

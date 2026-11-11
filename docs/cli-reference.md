@@ -85,6 +85,26 @@ Review default local user skill roots:
 python3 <skill-root>/scripts/security_review_skills.py --format markdown
 ```
 
+## Local agent environment scan
+
+The unified CLI includes a read-only `agents scan` command that reports which
+cataloged coding-agent tools leave local evidence, their rule and skill roots,
+shared physical skill roots, and local Skill Atlas copy versions:
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py agents scan
+python3 <skill-root>/scripts/skill_atlas.py agents scan --project . --format json
+python3 <skill-root>/scripts/skill_atlas.py agents scan --home /path/to/home
+```
+
+It reads filesystem metadata and local `skill.json` manifests only: it never
+executes a tool, opens no network connection, reads no credentials or session
+data, and writes nothing. Levels are file-evidence levels only (`not-detected`,
+`detected`, `configured`) and never prove runtime loading. Candidate paths and
+home overrides remain unverified hints. See
+[Local Agent Environment Scan](agent-environments.md) for the tool catalog, JSON
+contract, limitations, and verification guidance.
+
 ## Local agent messages
 
 The unified CLI includes an optional `message` group for compact cross-agent
