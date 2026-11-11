@@ -128,6 +128,28 @@ home overrides remain unverified hints. See
 [Local Agent Environment Scan](agent-environments.md) for the tool catalog, JSON
 contract, limitations, and verification guidance.
 
+## Local disk usage audit
+
+The unified CLI includes a read-only `disk scan` command for agent homes,
+caches, sessions, plugins, project media, build artifacts, and Git objects:
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py disk scan
+python3 <skill-root>/scripts/skill_atlas.py disk scan \
+  --root ~/Documents/ChatGPT --root ~/Documents/Codex --min-file-mb 100
+python3 <skill-root>/scripts/skill_atlas.py disk scan --project . --format json
+```
+
+Flags: `--home PATH` (known-root base, default user home), repeated
+`--root PATH`, `--project PATH`, `--top N` (default 15, bounded to 0–100),
+`--min-file-mb N` (default 200; files at or above), `--max-entries N` (default
+400000, per-root safety limit), and `--format markdown|json`. The scan reads
+metadata only, never follows symlinks while walking, and never deletes, moves,
+compresses, or archives anything; categories, risk levels, and suggested actions
+are name-based heuristics and plans, not cleanup. See [Disk Usage
+Audit](disk-scan.md) for known roots, categories, the JSON contract, and
+limitations.
+
 ## Local agent messages
 
 The unified CLI includes an optional `message` group for compact cross-agent

@@ -16,6 +16,7 @@ import audit_skills
 import agent_environments
 import agent_handoff
 import agent_messages
+import disk_scan
 import handoff_advisor
 import project_roots
 import feedback_loop
@@ -923,6 +924,28 @@ def add_project_commands(subparsers: argparse._SubParsersAction) -> None:
     audit.set_defaults(handler=handle_projects)
 
 
+def handle_disk(args: argparse.Namespace) -> None:
+    result = disk_scan.run(args)
+    if args.format == "json":
+        json_print(result)
+    else:
+        disk_scan.emit_markdown(result)
+
+
+def add_disk_commands(subparsers: argparse._SubParsersAction) -> None:
+    disk = subparsers.add_parser(
+        "disk",
+        help="Audit agent, cache and project disk usage without changing files.",
+    )
+    actions = disk.add_subparsers(dest="action", required=True)
+    scan = actions.add_parser(
+        "scan",
+        help="Read-only disk audit of agent homes, caches, sessions and projects.",
+    )
+    disk_scan.add_arguments(scan)
+    scan.set_defaults(handler=handle_disk)
+
+
 def handle_message(args: argparse.Namespace) -> None:
     try:
         result = agent_messages.run(args)
@@ -1017,6 +1040,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     add_market_commands(subparsers)
     add_agent_commands(subparsers)
     add_agents_commands(subparsers)
+    add_disk_commands(subparsers)
     add_project_commands(subparsers)
     add_message_commands(subparsers)
     add_handoff_advice_command(subparsers)
