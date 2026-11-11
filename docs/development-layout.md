@@ -126,6 +126,22 @@ unique work:
 
 An archive is evidence, not a development location and not an installation.
 
+
+## Protect the integration branch
+
+A development convention only works if the shared branch cannot be changed around it.
+On GitHub, protect the branch that agents push to (usually `main`):
+
+- **Require a pull request before merging.** Direct pushes bypass review, status checks and the history that later agents read.
+- **Require the project's CI status check** (for this repository, the `python` job). A green check is evidence, not decoration.
+- **Block force pushes and branch deletion.**
+- **Include administrators.** Without this, an admin token (including an automation token) can bypass the rules. The protection then protects people from their own automation, not just from each other.
+- Require conversation resolution when review comments are used.
+
+Administrators can still disable protection in repository settings; that is an explicit, auditable action rather than a routine bypass. A solo maintainer pays a small cost: hotfixes also go through a pull request. That cost is usually smaller than recovering from an unreviewed or unverified push.
+
+Hosts other than GitHub expose similar controls (protected branches, required checks, merge queues). The principle is the same: the integration branch accepts changes only through a reviewed, verified path.
+
 ## Limitations
 
 - Example paths in this page are illustrative; platform conventions and agent tools
