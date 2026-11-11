@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/github/license/Jorgut/skill-atlas?style=flat-square)
 ![Agent Skill](https://img.shields.io/badge/Agent%20Skill-Skill%20Manager-111111?style=flat-square)
 
-Skill Atlas is a local-aware, cross-platform manager for agent skills. It inventories installed skills, detects duplicates and symlinks, plans updates and consolidation, discovers alternatives and competitors, recommends skill stacks for products and professional workflows, validates multi-skill orchestration, and guides shared project context and handoff across agent tools.
+Skill Atlas is a local-aware, cross-platform manager for agent skills. It inventories installed skills, detects duplicates and symlinks, plans updates and consolidation, discovers alternatives and competitors, recommends skill stacks for products and professional workflows, validates multi-skill orchestration, guides shared project context and handoff across agent tools, and can relay compact cross-agent handoff messages through local files.
 
 It supports Codex, OpenCode, Claude Code, shared `~/.agents/skills` installations, plugin caches, and custom skill roots. Its agent-led collaboration workflow also covers DeepSeek Harness and other tools after verifying their instruction-loading support. Read-only planning is the default.
 
@@ -68,7 +68,7 @@ Codex does not use the bundled Markdown slash-command adapter. In Codex, invoke 
 
 ## What It Does
 
-Skill Atlas exposes six main workflows:
+Skill Atlas exposes seven main workflows:
 
 | Workflow | Purpose | Example |
 | --- | --- | --- |
@@ -78,6 +78,7 @@ Skill Atlas exposes six main workflows:
 | `orchestrate` | Build and validate an ordered multi-skill workflow | `orchestrate validate "Design an automotive HMI"` |
 | `market` | Check public-market freshness or record a reviewed shared snapshot | `market status` |
 | `monitor` | Schedule recurring competitor research and compare completed snapshots | `monitor add closeout --interval monthly` |
+| `message` | Relay optional compact handoff messages between local agents as files | `message send --task issue-28 --from Codex --to "Claude Code" --summary "Review the camera diff"` |
 
 Examples using the deterministic CLI:
 
@@ -112,9 +113,30 @@ Use Skill Atlas to inspect how Codex, Claude Code, OpenCode, and DeepSeek Harnes
 
 The agent-led workflow discovers tool instruction entries, reuses project rules and state, and adds an index when multiple projects need routing. It records progress and file ownership while preserving history and backups. Model and agent choices follow task requirements and actual capabilities.
 
-Reports distinguish **configured files**, **verified loading**, and **verified handoff**. Rule-entry setup is agent-led; the task continuity CLI below is separate and does not synchronize live chats. See the [collaboration guide](docs/cross-agent-collaboration.md) for the procedure.
+Reports distinguish **configured files**, **verified loading**, and **verified handoff**. Rule-entry setup is agent-led; the task continuity CLI and the optional local message transport described below are separate and do not synchronize live chats. See the [collaboration guide](docs/cross-agent-collaboration.md) for the procedure.
 
 The guide also covers WorkBuddy rule-entry discovery, project-guidance precedence, account scope, and runtime verification against the installed version.
+
+### Local agent handoff messages (optional)
+
+Skill Atlas can queue compact handoff notes between agents as local files. Nothing is sent over the network and the recipient is not notified; a person or an already-running agent must read the inbox. Envelopes are immutable, acknowledgements leave append-only receipts, and a message sent with `--requires-approval` cannot be recorded as completed until a person approves it.
+
+```bash
+python3 scripts/skill_atlas.py message send --project . --task issue-28 \
+  --from Codex --to "Claude Code" --summary "Review the camera diff" \
+  --conclusion "Camera works; selection remains" --evidence src/camera.ts \
+  --requires-approval
+
+python3 scripts/skill_atlas.py message inbox --project . --task issue-28 --agent "Claude Code"
+python3 scripts/skill_atlas.py message ack --project . --task issue-28 --id <message-id> \
+  --agent "Claude Code" --status taken
+
+# A person approves before a --requires-approval message can be completed:
+python3 scripts/skill_atlas.py message approve --project . --task issue-28 \
+  --id <message-id> --by "AJ"
+```
+
+Messages live under `.agent-state/messages/<task>/` and must stay uncommitted; do not put secrets in a payload. This is local transport only: it does not start agents, dispatch work, review code, merge branches, or replace human approval. The default TTL is 24 hours and a message chain stops at 10 passes. See [Agent Handoff Messages](docs/agent-messaging.md).
 
 ### Public rule and context templates
 
@@ -329,7 +351,7 @@ See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, dis
 
 ## Status
 
-Skill Atlas is currently `0.6.6-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.7.0-beta`. Interfaces and platform adapters may change before the stable release.
 
 
 ## Integrated Closeout and multi-agent handoff

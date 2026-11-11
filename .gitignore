@@ -2,3 +2,5 @@ __pycache__/
 *.py[cod]
 .DS_Store
 outputs/
+.agent-state/messages/
+.agent-state/.lock

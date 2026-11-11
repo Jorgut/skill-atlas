@@ -1,6 +1,6 @@
 # Cross-Agent Context and Handoff
 
-Use this workflow when configuring cooperation across agent tools, diagnosing missing shared context, or organizing project memory. Rule-entry setup is an agent-led workflow. Optional checkpoint, handoff, and resume CLI commands are documented below; they do not provide startup hooks, message transport, or automatic model switching.
+Use this workflow when configuring cooperation across agent tools, diagnosing missing shared context, or organizing project memory. Rule-entry setup is an agent-led workflow. Optional checkpoint, handoff, and resume CLI commands are documented below; they do not provide startup hooks or automatic model switching. A separate opt-in local transport (`message` commands, documented under [Agent Handoff Messages](agent-messaging.md)) queues compact handoff notes as files under `.agent-state/messages/<task>/`; it does not notify, wake, or start the recipient, and a person must approve any message marked `--requires-approval` before it can be recorded as completed.
 
 ## Discover before configuring
 
@@ -105,6 +105,17 @@ inspect the difference rather than assuming the previous work is valid.
 The CLI does not start other agents, execute tests, write Git commits,
 or transfer local files between machines. Actual automatic triggers
 remain platform-specific.
+
+The optional `message` commands add a local file-based transport on top of the
+same `.agent-state/` tree, scoped per task. `message send` queues a compact
+envelope; the addressed recipient reads it with `message inbox` or
+`message show` and records `taken`, `completed`, or `refused` with
+`message ack`. Messages sent with `--requires-approval` cannot be marked
+`completed` until a person runs `message approve --by`. Envelopes are
+immutable, receipts are append-only, the default TTL is 24 hours, and a
+message chain stops at 10 passes. Messages never notify or start an agent,
+never open a network connection, and stay out of Git (`.agent-state/messages/`) with no secrets in
+the payload. See [Agent Handoff Messages](agent-messaging.md).
 
 The integrated Closeout audit and evidence rules live under
 `closeout/`. See [the staged implementation plan](multi-agent-development.md).

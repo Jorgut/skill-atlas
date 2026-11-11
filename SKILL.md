@@ -1,6 +1,6 @@
 ---
 name: skill-atlas
-description: "Manage agent skills across platforms: inventory, duplicates, upstream evidence, safe updates, public alternatives, task/model/tool recommendations, and multi-skill orchestration. Use also to configure shared rules, per-project context, and cross-agent handoff. Read-only by default; apply changes only within explicit user authorization."
+description: "Manage agent skills across platforms: inventory, duplicates, upstream evidence, safe updates, public alternatives, task/model/tool recommendations, and multi-skill orchestration. Use also to configure shared rules, per-project context, cross-agent handoff, and optional local cross-agent messages. Read-only by default; apply changes only within explicit user authorization."
 ---
 
 # Skill Atlas
@@ -19,6 +19,7 @@ Choose the workflow from the request:
 - public-market freshness or a reviewed shared market snapshot: run market
 - recurring competitor comparison with historical differences: run monitor
 - cross-agent rules, project context, or handoff setup: read the cross-agent context workflow below
+- handing a compact review or action request to a local agent: read Agent Handoff Messages below
 - a downloaded or proposed third-party skill: run strict security review
 
 ## Executed Public Search
@@ -42,6 +43,21 @@ When asked to connect agent tools, organize per-project memory, or verify shared
 For WorkBuddy setup, read the WorkBuddy adapter discovery section in that guide; verify its effective rules root, project-guidance precedence, account scope, and loading conditions.
 
 Reusable public starting points are available in [templates/README.md](templates/README.md): general rules, project rules, and project context. Adapt them to verified tool/project requirements without publishing private records.
+
+## Agent Handoff Messages
+
+The optional `message` command group relays compact handoff notes through local
+files under `.agent-state/messages/<task>/`. Use `message send` to queue a
+summary with short evidence pointers, then have the addressed recipient read
+`message inbox` or `message show` and record `taken`, `completed`, or `refused`
+with `message ack`. A message sent with `--requires-approval` cannot be recorded
+as `completed` until a person runs `message approve`. Nothing is sent over the
+network: no agent is started, woken, or notified, and a queued file is not proof
+of delivery. Use a request ID for safe retries, respect the default 24-hour TTL
+and 10-pass chain limit, keep `.agent-state/messages/` uncommitted, and never place
+secrets in a payload. This is Stage 1.5 transport only; the Stage 2 orchestrator
+remains unimplemented. Read [docs/agent-messaging.md](docs/agent-messaging.md)
+for flags, states, limits, and a worked Codex → Claude Code example.
 
 ## Commands
 
@@ -77,19 +93,25 @@ skill-atlas
 ├── market
 │   ├── status     inspect shared public-market snapshot freshness
 │   └── refresh    create a research packet or save reviewed market results
-└── monitor
-    ├── add        create a daily, weekly, monthly, or quarterly monitor
-    ├── list       list monitor configurations
-    ├── status     inspect one schedule and its snapshot count
-    ├── due        list comparisons whose next run is due
-    ├── run        create a research packet or record reviewed results
-    ├── history    compare saved snapshots over time
-    └── remove     remove configuration while retaining snapshots
+├── monitor
+│   ├── add        create a daily, weekly, monthly, or quarterly monitor
+│   ├── list       list monitor configurations
+│   ├── status     inspect one schedule and its snapshot count
+│   ├── due        list comparisons whose next run is due
+│   ├── run        create a research packet or record reviewed results
+│   ├── history    compare saved snapshots over time
+│   └── remove     remove configuration while retaining snapshots
+└── message
+    ├── send       queue one compact handoff message for a local agent or person
+    ├── inbox      list messages addressed to one agent; read-only
+    ├── show       show one message and its local receipts; read-only
+    ├── ack        record taken, completed, or refused
+    └── approve    record a person's approval before completion
 ```
 
-Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
+Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. The `message` actions write only under `.agent-state/messages/`; they do not contact another agent or modify project files. `message approve` records a person's local approval and must not be run on another person's behalf. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
 
-Agent command syntax varies. If a platform does not pass arguments after `$skill-atlas` or does not support dollar-prefixed skill calls, accept equivalent natural language such as "Use Skill Atlas manage" or "用 Skill Atlas 编排这个任务". Preserve the six command meanings across platforms.
+Agent command syntax varies. If a platform does not pass arguments after `$skill-atlas` or does not support dollar-prefixed skill calls, accept equivalent natural language such as "Use Skill Atlas manage" or "用 Skill Atlas 编排这个任务". Preserve these command meanings across platforms.
 
 The bundled `commands/skill-atlas.md` is a portable slash-command adapter for
 platforms that load Markdown command files. Use the installer below to register
