@@ -234,6 +234,7 @@ Codex does not use the bundled Markdown slash-command adapter. In Codex, invoke 
 | `market` | Check reviewed public-market snapshot freshness or save reviewed results | `market status` |
 | `monitor` | Schedule recurring competitor research and compare completed snapshots | `monitor add closeout --interval monthly` |
 | `agents` | Read-only local evidence for agent tools, rule roots, skill roots, and Skill Atlas copies | `agents scan --project .` |
+| `disk` | Read-only disk audit: agent homes, caches, sessions, plugins, media, build artifacts, and Git objects, with risk levels and plan-only actions | `disk scan --min-file-mb 100` |
 | `projects` | Read-only project-root audit: duplicate copies, divergent docs, nested roots | `projects audit --root ~/Projects --depth 2` |
 | `message` | Optional local handoff envelopes, receipts, acknowledgements, and a human approval gate | `message send --task issue-28 --from Codex --to "Claude Code" --summary "Review the camera diff"` |
 | `checkpoint` / `handoff` / `resume` | Save task-scoped Git evidence, record a handoff, and verify it read-only on receipt | `checkpoint --project . --task issue-28 --agent Codex --summary "..." --next-action "..."` |
@@ -252,6 +253,19 @@ $skill-atlas find Rhino and Blender skills, connectors, and missing capabilities
 Use Skill Atlas to compare my UX skill with public competitors without replacing mine.
 ```
 
+### Disk usage (read-only)
+
+Agent work also leaves a lot of local data. `disk scan` audits known agent roots under your home plus repeated `--root` directories and one optional `--project`:
+
+```bash
+python3 scripts/skill_atlas.py disk scan
+python3 scripts/skill_atlas.py disk scan \
+  --root ~/Documents/ChatGPT --root ~/Documents/Codex --min-file-mb 100
+python3 scripts/skill_atlas.py disk scan --project . --format json
+```
+
+It reports apparent sizes, categories, risk levels (low/medium/high), largest files, and a suggested review list with plan-only actions. It reads metadata only: not file contents, credentials, or session text. It never follows symlinks while walking a tree, and never deletes, moves, compresses, or archives anything. Sizes are apparent, so APFS compression, clones, snapshots, and hard links can make reclaimable space differ, and databases or `.git` objects must not be deleted directly. Review before acting; see [Disk Usage Audit](docs/disk-scan.md).
+
 ## Start here
 
 | Document | What it covers |
@@ -259,6 +273,7 @@ Use Skill Atlas to compare my UX skill with public competitors without replacing
 | [Installation and Development Layout](docs/development-layout.md) | Which copy is the source of truth, where worktrees, installation copies, and archives belong, and how to keep an installation honest |
 | [Local Agent Environment Scan](docs/agent-environments.md) | `agents scan`: the tool catalog, evidence levels, copy audit, version mismatch, and what the scan cannot prove |
 | [Project Root and Duplicate Documentation Audit](docs/project-root-audit.md) | `projects audit`: duplicate-copy evidence, document hashing, nested roots, and plan-only recommendations |
+| [Disk Usage Audit](docs/disk-scan.md) | `disk scan`: known roots, categories and risk, apparent-size limits, suggested review, and JSON contract |
 | [Agent Handoff Messages](docs/agent-messaging.md) | `message`: envelope states, receipts, idempotency, TTL, the approval gate, and the optional MCP adapter |
 | [Cross-Agent Context and Handoff](docs/cross-agent-collaboration.md) | Configuring shared rules, per-project context, and the configured/loaded/handoff-verified evidence levels |
 | [Component CLI Reference](docs/cli-reference.md) | Lower-level helpers, automation output, and command-level detail |
@@ -576,4 +591,4 @@ For the recommended local checkout, worktree, installation and archive layout â€
 
 ## Status
 
-Skill Atlas is currently `0.8.0-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.9.0-beta`. Interfaces and platform adapters may change before the stable release.

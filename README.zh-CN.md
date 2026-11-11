@@ -234,6 +234,7 @@ Codex 不使用捆绑的 Markdown slash 命令适配器。在 Codex 中，以 `$
 | `market` | 检查已审核公开市场快照的新鲜度，或保存已审核结果 | `market status` |
 | `monitor` | 安排定期竞品研究，并比较已完成快照 | `monitor add closeout --interval monthly` |
 | `agents` | 面向 Agent 工具、规则根目录、Skill 根目录和 Skill Atlas 副本的只读本地证据 | `agents scan --project .` |
+| `disk` | 只读磁盘审计：Agent 主目录、缓存、会话、插件、媒体、构建产物和 Git 对象，包含风险等级与仅计划操作 | `disk scan --min-file-mb 100` |
 | `projects` | 只读项目根审计：重复副本、分叉文档、嵌套根目录 | `projects audit --root ~/Projects --depth 2` |
 | `message` | 可选的本地交接信封、回执、确认和人工审批门 | `message send --task issue-28 --from Codex --to "Claude Code" --summary "Review the camera diff"` |
 | `checkpoint` / `handoff` / `resume` | 保存任务范围的 Git 证据、记录交接，并在接收时只读验证 | `checkpoint --project . --task issue-28 --agent Codex --summary "..." --next-action "..."` |
@@ -252,6 +253,19 @@ $skill-atlas find Rhino and Blender skills, connectors, and missing capabilities
 Use Skill Atlas to compare my UX skill with public competitors without replacing mine.
 ```
 
+### 磁盘占用（只读）
+
+Agent 工作也会在本地留下大量数据。`disk scan` 会审计你主目录下的已知 Agent 根目录，以及可重复提供的 `--root` 目录和一个可选的 `--project`：
+
+```bash
+python3 scripts/skill_atlas.py disk scan
+python3 scripts/skill_atlas.py disk scan \
+  --root ~/Documents/ChatGPT --root ~/Documents/Codex --min-file-mb 100
+python3 scripts/skill_atlas.py disk scan --project . --format json
+```
+
+它会报告表观大小、类别、风险等级（低/中/高）、最大文件，以及带仅计划操作的建议复查列表。它只读取元数据：不读取文件内容、凭据或会话文本。它在遍历时从不跟随软链接，也从不删除、移动、压缩或归档任何内容。大小是表观大小，因此 APFS 压缩、克隆、快照和硬链接可能使可回收空间不同；数据库或 `.git` 对象不得直接删除。行动前请先复查；参见[磁盘占用审计](docs/disk-scan.md)。
+
 ## 从这里开始
 
 | 文档 | 内容 |
@@ -259,6 +273,7 @@ Use Skill Atlas to compare my UX skill with public competitors without replacing
 | [安装与开发布局](docs/development-layout.md) | 哪份副本是唯一事实源，worktree、安装副本和归档应放在哪里，以及如何让安装保持诚实 |
 | [本地 Agent 环境扫描](docs/agent-environments.md) | `agents scan`：工具目录、证据等级、副本审计、版本不一致，以及扫描无法证明什么 |
 | [项目根与重复文档审计](docs/project-root-audit.md) | `projects audit`：重复副本证据、文档哈希、嵌套根目录和仅计划建议 |
+| [磁盘占用审计](docs/disk-scan.md) | `disk scan`：已知根目录、类别与风险、表观大小限制、建议复查和 JSON 契约 |
 | [Agent 交接消息](docs/agent-messaging.md) | `message`：信封状态、回执、幂等、TTL、人工审批门和可选的 MCP 适配器 |
 | [跨 Agent 上下文与交接](docs/cross-agent-collaboration.md) | 配置共享规则、项目级上下文，以及已配置/已加载/交接已验证的证据等级 |
 | [组件 CLI 参考](docs/cli-reference.md) | 更底层的辅助工具、自动化输出和命令级细节 |
@@ -567,4 +582,4 @@ python3 -m unittest discover -s tests -v
 
 ## 状态
 
-Skill Atlas 当前为 `0.8.0-beta`。在稳定版发布前，接口和平台适配器可能发生变化。
+Skill Atlas 当前为 `0.9.0-beta`。在稳定版发布前，接口和平台适配器可能发生变化。
