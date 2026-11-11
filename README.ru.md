@@ -4,6 +4,8 @@
 
 Сайт: [jorgut.github.io/skill-atlas](https://jorgut.github.io/skill-atlas/)
 
+**Локальный атлас окружения агентов** — что видят ваши агенты, что они загружают и где копии расходятся.
+
 [![skills.sh](https://img.shields.io/badge/skills.sh-Jorgut/skill--atlas-8A2BE2?style=flat-square)](https://skills.sh/Jorgut/skill-atlas)
 [![Install with npx](https://img.shields.io/badge/npx%20skills%20add-Jorgut%2Fskill--atlas-000?style=flat-square)](https://github.com/Jorgut/skill-atlas)
 ![License](https://img.shields.io/github/license/Jorgut/skill-atlas?style=flat-square)

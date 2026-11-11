@@ -4,6 +4,8 @@
 
 Website: [jorgut.github.io/skill-atlas](https://jorgut.github.io/skill-atlas/)
 
+**The local agent environment atlas** — what your agents see, what they load, where copies diverge.
+
 [![skills.sh](https://img.shields.io/badge/skills.sh-Jorgut/skill--atlas-8A2BE2?style=flat-square)](https://skills.sh/Jorgut/skill-atlas)
 [![Install with npx](https://img.shields.io/badge/npx%20skills%20add-Jorgut%2Fskill--atlas-000?style=flat-square)](https://github.com/Jorgut/skill-atlas)
 ![License](https://img.shields.io/github/license/Jorgut/skill-atlas?style=flat-square)
