@@ -81,11 +81,77 @@ def fingerprint(root: Path) -> dict[str, Any]:
     }
 
 
+def sync_status(root: Path) -> dict[str, Any]:
+    """Read-only local Git sync status; never fetches, pushes or mutates refs."""
+    try:
+        branch = git(root, "symbolic-ref", "--short", "HEAD")
+    except HandoffError:
+        branch = "DETACHED"
+    detached = branch == "DETACHED"
+    upstream: str | None = None
+    try:
+        upstream = git(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+    except HandoffError:
+        upstream = None
+    ahead = 0
+    behind = 0
+    if upstream:
+        counts = git(root, "rev-list", "--left-right", "--count", f"{upstream}...HEAD").split()
+        if len(counts) == 2:
+            behind, ahead = int(counts[0]), int(counts[1])
+    raw = git(root, "status", "--porcelain=v1", "--untracked-files=all")
+    dirty = len([line for line in raw.splitlines() if line and
+                 not line[3:].startswith(f"{STATE_DIR}/")])
+    try:
+        last_commit = git(root, "log", "-1", "--format=%cI")
+    except HandoffError:
+        last_commit = None
+    warnings: list[str] = []
+    if detached:
+        warnings.append("Detached HEAD: commits are not on a branch and are easy to lose; create a branch before continuing")
+    elif not upstream:
+        warnings.append("Current branch has no upstream: commits are local-only; push when the work is reviewed")
+    if ahead > 0:
+        warnings.append(f"{ahead} local commit(s) are not on the remote; push when the work is reviewed")
+    if behind > 0:
+        warnings.append(f"Remote-tracking branch is {behind} commit(s) ahead; fetch/rebase or merge before handoff")
+    if dirty > 0:
+        warnings.append(f"{dirty} uncommitted change(s); commit or record them before handoff")
+    notes = ["Tracking refs may be stale: no fetch or network call was made"]
+    return {
+        "branch": branch,
+        "upstream": upstream,
+        "has_upstream": upstream is not None,
+        "ahead": ahead,
+        "behind": behind,
+        "dirty": dirty,
+        "detached": detached,
+        "last_commit": last_commit,
+        "warnings": warnings,
+        "tracking_refs_may_be_stale": upstream is not None,
+        "notes": notes,
+    }
+
+
+def sync_report(args: argparse.Namespace) -> dict[str, Any]:
+    root = repo_root(args.project)
+    status = sync_status(root)
+    return {
+        "status": "ok",
+        "project": str(root),
+        "git": status,
+        "warnings": status["warnings"],
+        "notes": "Read-only local Git status; no fetch, push or repository mutation executed",
+    }
+
+
 def write_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
     root = repo_root(args.project)
     target = state_path(root, args.task)
     if args.test_result != "not-run" and not args.test_command:
         raise HandoffError("A passed or failed test result requires --test-command")
+    git_state = fingerprint(root)
+    git_state["sync"] = sync_status(root)
     state = {
         "schema_version": 1,
         "task": args.task,
@@ -96,7 +162,7 @@ def write_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
         "completed": args.completed or [],
         "remaining": args.remaining or [],
         "next_action": args.next_action,
-        "git": fingerprint(root),
+        "git": git_state,
         "tests": {
             "command": args.test_command,
             "result": args.test_result,
@@ -123,7 +189,8 @@ def write_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
                 os.unlink(name)
         fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
     return {"status": "recorded", "state_file": str(target), "history_file": str(archive),
-            "checkpoint": state, "notes": "Local state only; no Git commit, push, tests or agent dispatch executed"}
+            "checkpoint": state, "warnings": git_state["sync"]["warnings"],
+            "notes": "Local state only; no Git commit, push, tests or agent dispatch executed"}
 
 
 def inspect_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
@@ -139,12 +206,14 @@ def inspect_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
     if checkpoint.get("schema_version") != 1 or checkpoint.get("task") != args.task:
         raise HandoffError("Checkpoint schema or task does not match")
     current = fingerprint(root)
+    current["sync"] = sync_status(root)
     previous = checkpoint.get("git") or {}
     changed = [field for field in ("branch", "commit", "working_tree_changes", "working_tree_digest", "content_digest")
                if current.get(field) != previous.get(field)]
     return {"status": "review-required" if changed else "checkpoint-consistent",
             "state_file": str(target), "changed_fields": changed,
             "checkpoint": checkpoint, "current_git": current,
+            "warnings": current["sync"]["warnings"],
             "notes": "Read-only inspection. Recheck files, issue and tests; no agent execution started"}
 
 
@@ -162,10 +231,17 @@ def emit_markdown(result: dict[str, Any]) -> None:
         print(f"- branch: {checkpoint['git']['branch']}")
         print(f"- commit: {checkpoint['git']['commit']}")
         print(f"- next: {checkpoint['next_action']}")
+    for warning in result.get("warnings") or []:
+        print(f"- warning: {warning}")
     if result.get("changed_fields"):
         print(f"- mismatches: {', '.join(result['changed_fields'])}")
     if result.get("notes"):
         print(f"- note: {result['notes']}")
+
+
+def add_sync_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--project", default=".")
+    parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:

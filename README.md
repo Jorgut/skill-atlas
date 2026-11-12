@@ -238,6 +238,7 @@ Codex does not use the bundled Markdown slash-command adapter. In Codex, invoke 
 | `projects` | Read-only project-root audit: duplicate copies, divergent docs, nested roots | `projects audit --root ~/Projects --depth 2` |
 | `message` | Optional local handoff envelopes, receipts, acknowledgements, and a human approval gate | `message send --task issue-28 --from Codex --to "Claude Code" --summary "Review the camera diff"` |
 | `checkpoint` / `handoff` / `resume` | Save task-scoped Git evidence, record a handoff, and verify it read-only on receipt | `checkpoint --project . --task issue-28 --agent Codex --summary "..." --next-action "..."` |
+| `sync` | Read-only Git sync reminder: branch, upstream, ahead/behind, dirty, detached warnings; never fetches or pushes | `sync status --project .` |
 | `handoff advise` | Read-only model-aware handoff recommendation from a reviewed local registry | `handoff advise --project . --task issue-10` |
 | `closeout` | Bundled read-only project inventory and Closeout evaluation validation | `closeout audit --project .` |
 | `create` | Select a documented Skill creation method without creating anything | `create plan "Create a skill from GitHub projects" --from github` |
@@ -526,7 +527,7 @@ python3 /path/to/skill-atlas/scripts/skill_atlas.py closeout audit --project .
 python3 /path/to/skill-atlas/scripts/skill_atlas.py closeout evals
 ```
 
-The checkpoint uses the Git branch, HEAD, working-tree change count, and status fingerprint; it stores a task-scoped current JSON snapshot plus immutable local history under `.agent-state/`. That state is local and stays uncommitted. Test results are marked **agent-reported** rather than independently executed. `resume` is strictly read-only and flags stale Git evidence. No command commits code, pushes state, dispatches another agent, or switches models.
+The checkpoint uses the Git branch, HEAD, working-tree change count, and status fingerprint; it stores a task-scoped current JSON snapshot plus immutable local history under `.agent-state/`. That state is local and stays uncommitted. Test results are marked **agent-reported** rather than independently executed. `resume` is strictly read-only and flags stale Git evidence. Checkpoint and handoff results now include a read-only `git.sync` block and warnings for a missing upstream, unpushed commits, being behind the remote-tracking branch, uncommitted changes, or detached HEAD. Run `python3 scripts/skill_atlas.py sync status --project .` for the same reminder on demand â€” at a milestone, before a handoff, or at the end of a work block. This is not a background timer or notification: it runs only when you invoke it. It never fetches, pushes, commits, or changes a branch; you decide whether reviewed commits should be pushed. No command commits code, pushes state, dispatches another agent, or switches models.
 
 Model-aware handoff is a separate read-only adviser. It examines the saved checkpoint, required tools, and a reviewed local model/agent registry before recommending a successor; it never switches models or checks billing, and returns a **provisional shortlist** rather than an invented leaderboard when evidence is missing:
 
@@ -593,4 +594,4 @@ For the recommended local checkout, worktree, installation and archive layout â€
 
 ## Status
 
-Skill Atlas is currently `0.10.0-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.11.0-beta`. Interfaces and platform adapters may change before the stable release.

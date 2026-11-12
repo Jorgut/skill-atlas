@@ -238,6 +238,7 @@ Codex 不使用捆绑的 Markdown slash 命令适配器。在 Codex 中，以 `$
 | `projects` | 只读项目根审计：重复副本、分叉文档、嵌套根目录 | `projects audit --root ~/Projects --depth 2` |
 | `message` | 可选的本地交接信封、回执、确认和人工审批门 | `message send --task issue-28 --from Codex --to "Claude Code" --summary "Review the camera diff"` |
 | `checkpoint` / `handoff` / `resume` | 保存任务范围的 Git 证据、记录交接，并在接收时只读验证 | `checkpoint --project . --task issue-28 --agent Codex --summary "..." --next-action "..."` |
+| `sync` | 只读 Git 同步提醒：分支、上游、领先/落后、未提交变更和 detached HEAD 警告；从不 fetch 或 push | `sync status --project .` |
 | `handoff advise` | 基于已审核本地注册表的只读模型感知交接建议 | `handoff advise --project . --task issue-10` |
 | `closeout` | 捆绑的只读项目清单与 Closeout 评估验证 | `closeout audit --project .` |
 | `create` | 选择一种有文档依据的 Skill 创建方法，而不实际创建 | `create plan "Create a skill from GitHub projects" --from github` |
@@ -517,7 +518,7 @@ python3 /path/to/skill-atlas/scripts/skill_atlas.py closeout audit --project .
 python3 /path/to/skill-atlas/scripts/skill_atlas.py closeout evals
 ```
 
-检查点使用 Git 分支、HEAD、工作区变更数量和状态指纹；它在 `.agent-state/` 下保存任务范围的当前 JSON 快照以及不可变的本地历史。该状态是本地的，保持未提交。测试结果标记为 **Agent 报告**，而不是独立执行。`resume` 严格只读，并会标记过期的 Git 证据。没有命令会提交代码、推送状态、派发另一个 Agent 或切换模型。
+检查点使用 Git 分支、HEAD、工作区变更数量和状态指纹；它在 `.agent-state/` 下保存任务范围的当前 JSON 快照以及不可变的本地历史。该状态是本地的，保持未提交。测试结果标记为 **Agent 报告**，而不是独立执行。`resume` 严格只读，并会标记过期的 Git 证据。检查点和交接结果现在包含只读的 `git.sync` 块，以及无上游、未推送提交、落后于远端跟踪分支、未提交变更或 detached HEAD 的警告。可随时运行 `python3 scripts/skill_atlas.py sync status --project .` 获取同样的提醒——在里程碑、交接前或一个工作块结束时。它不是后台计时器或通知：只有你主动调用时才运行。它从不 fetch、push、提交或切换分支；是否推送已审核的提交由你决定。没有命令会提交代码、推送状态、派发另一个 Agent 或切换模型。
 
 模型感知交接是一个独立的只读顾问。它会检查已保存的检查点、所需工具和已审核的本地模型/Agent 注册表，然后推荐继任者；它从不切换模型或检查计费，并在证据缺失时返回 **暂定候选名单**，而不是编造的排行榜：
 
@@ -584,4 +585,4 @@ python3 -m unittest discover -s tests -v
 
 ## 状态
 
-Skill Atlas 当前为 `0.10.0-beta`。在稳定版发布前，接口和平台适配器可能发生变化。
+Skill Atlas 当前为 `0.11.0-beta`。在稳定版发布前，接口和平台适配器可能发生变化。

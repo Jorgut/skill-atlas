@@ -34,7 +34,7 @@ Confirm commands against the project before relying on them. Record checks actua
 
 Read current state and Git status before substantive work. Record the actual role and file scope when agents overlap. Re-read shared files before updates and preserve concurrent work. Do not switch another agent's branch or assume different checkouts are synchronized.
 
-After meaningful progress, update the established state file with decisions, evidence, unresolved items, and next action. If using Skill Atlas checkpoints, keep task IDs consistent; saved test results are agent-reported, and the receiving agent verifies current code/Git evidence before proceeding.
+After meaningful progress, update the established state file with decisions, evidence, unresolved items, and next action. If using Skill Atlas checkpoints, keep task IDs consistent; saved test results are agent-reported, and the receiving agent verifies current code/Git evidence before proceeding. Before handoff or the end of a work block, review branch/upstream/ahead/behind warnings (Skill Atlas `sync status` when available), tell the user what is unpushed, and never push automatically.
 
 ## Domain-specific requirements
 

@@ -936,6 +936,33 @@ def handle_disk(args: argparse.Namespace) -> None:
         disk_scan.emit_markdown(result)
 
 
+def handle_sync(args: argparse.Namespace) -> None:
+    result = agent_handoff.sync_report(args)
+    if args.format == "json":
+        json_print(result)
+        return
+    git_state = result["git"]
+    print("# Git sync status")
+    print(f"- branch: `{git_state['branch']}`")
+    print(f"- upstream: `{git_state['upstream']}`" if git_state["upstream"] else "- upstream: none")
+    print(f"- ahead: {git_state['ahead']}; behind: {git_state['behind']}; dirty: {git_state['dirty']}")
+    for warning in result["warnings"]:
+        print(f"- warning: {warning}")
+    print(f"- note: {result['notes']}")
+
+
+def add_sync_commands(subparsers: argparse._SubParsersAction) -> None:
+    sync = subparsers.add_parser(
+        "sync", help="Read-only local Git sync status for handoff and periodic checks."
+    )
+    actions = sync.add_subparsers(dest="action", required=True)
+    status = actions.add_parser(
+        "status", help="Report branch, upstream, ahead/behind, dirty state and warnings."
+    )
+    agent_handoff.add_sync_arguments(status)
+    status.set_defaults(handler=handle_sync)
+
+
 def add_disk_commands(subparsers: argparse._SubParsersAction) -> None:
     disk = subparsers.add_parser(
         "disk",
@@ -1043,6 +1070,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     add_monitor_commands(subparsers)
     add_market_commands(subparsers)
     add_agent_commands(subparsers)
+    add_sync_commands(subparsers)
     add_agents_commands(subparsers)
     add_disk_commands(subparsers)
     add_project_commands(subparsers)
