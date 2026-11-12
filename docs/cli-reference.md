@@ -159,6 +159,38 @@ suggested actions are name-based heuristics and plans, not cleanup. See
 [Disk Usage Audit](disk-scan.md) for known roots, categories, the JSON contract,
 the `apply` result, and limitations.
 
+## Checkpoints, handoff, and Git sync status
+
+`checkpoint` and `handoff` save task evidence locally under `.agent-state/`; `resume` reads it back
+without changing anything. Since `0.11.0-beta` their JSON results include a read-only
+`git.sync` block and a top-level `warnings` array so unpushed work is visible in the handoff
+evidence:
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py sync status --project .
+python3 <skill-root>/scripts/skill_atlas.py sync status --project . --format json
+```
+
+`sync status` reports:
+
+- `branch`, `upstream`, `has_upstream`, `ahead`, `behind`, `dirty`, `detached`, `last_commit`;
+- `warnings` for no upstream, unpushed commits (`ahead`), a remote-tracking branch ahead
+  (`behind`), uncommitted changes (`dirty`), and detached HEAD;
+- `tracking_refs_may_be_stale` and a note that no fetch or network call was made.
+
+Markdown prints `# Git sync status`, the branch, upstream (or `none`), ahead/behind/dirty counts,
+each warning, and the read-only note. JSON returns
+`{status: "ok", project, git: {...}, warnings, notes}`.
+
+`checkpoint`/`handoff` results carry `checkpoint.git.sync` with the same fields plus the top-level
+`warnings`; `resume` returns `current_git.sync` and current warnings. The saved checkpoint under
+`.agent-state/tasks/<task>.json` embeds `git.sync` in its `git` object. No command fetches, pushes,
+commits, rebases, switches branches, opens a network connection, or starts an agent. Because no fetch
+is performed, `ahead`/`behind` reflect local tracking refs and may be stale.
+
+See [Installation and Development Layout](development-layout.md#push-before-you-hand-off-and-during-long-work)
+for recommended cadence, optional shell/scheduler/hook wiring, and the rule to never auto-push.
+
 ## Local agent messages
 
 The unified CLI includes an optional `message` group for compact cross-agent

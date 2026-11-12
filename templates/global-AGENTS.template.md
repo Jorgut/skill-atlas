@@ -18,7 +18,7 @@ Inspect errors and relevant files before proposing a fix. Verify results with ch
 
 Identify the actual project from the request and workspace. Read its applicable rules and existing state file before substantive work. Reuse `PROJECT_STATE.md`, `CONTEXT.md`, or an established equivalent rather than creating competing copies. An optional project index can route multiple projects to their state files.
 
-Record meaningful decisions, completed work, evidence, unverified items, blockers, and next action. Before overlapping edits, confirm current roles and file scope, re-read shared files, and preserve other agents' updates. A historical assignment is not a live lock. Shared context does not authorize messaging another agent, changing its branch, or dispatching work.
+Record meaningful decisions, completed work, evidence, unverified items, blockers, and next action. Before overlapping edits, confirm current roles and file scope, re-read shared files, and preserve other agents' updates. A historical assignment is not a live lock. Shared context does not authorize messaging another agent, changing its branch, or dispatching work. Before handing off or ending a long work block, check local Git sync state (for example the read-only Skill Atlas `sync status` check) and surface unpushed or no-upstream warnings to the user; never push automatically.
 
 ## UI information hierarchy
 

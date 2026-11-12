@@ -142,6 +142,66 @@ Administrators can still disable protection in repository settings; that is an e
 
 Hosts other than GitHub expose similar controls (protected branches, required checks, merge queues). The principle is the same: the integration branch accepts changes only through a reviewed, verified path.
 
+## Push before you hand off (and during long work)
+
+A local commit is not a handoff. Work that exists only in one checkout — an unpushed branch, a commit
+with no upstream, or uncommitted changes — is invisible to another machine, another agent, or a
+resumed session that reads the remote. Push reviewed work before handing it off.
+
+Skill Atlas checkpoints and handoffs now record a read-only `git.sync` block in the saved state, and
+their command results add a top-level `warnings` array so this risk is visible in the handoff
+evidence:
+
+- **no upstream** — the current branch has no upstream; commits are local-only;
+- **ahead** — local commits are not on the remote;
+- **behind** — the remote-tracking branch is ahead; fetch and then rebase or merge deliberately;
+- **dirty** — uncommitted changes exist (the count excludes `.agent-state/`);
+- **detached HEAD** — commits are not on a branch and are easy to lose.
+
+`resume` reports the same current warnings when it inspects a saved checkpoint. To check on demand,
+run the read-only sync command:
+
+```bash
+python3 /path/to/skill-atlas/scripts/skill_atlas.py sync status --project .
+```
+
+```text
+# Git sync status
+- branch: `feat/issue-42`
+- upstream: `origin/feat/issue-42`
+- ahead: 1; behind: 0; dirty: 0
+- warning: 1 local commit(s) are not on the remote; push when the work is reviewed
+- note: Read-only local Git status; no fetch, push or repository mutation executed
+```
+
+The command never fetches, pushes, commits, rebases, or changes a branch, and it opens no network
+connection. `ahead` and `behind` are computed from local tracking refs, which may be stale until you
+fetch yourself. Treat the warnings as prompts for a human decision, not as a blocked state.
+
+Recommended checkpoints: when you save a checkpoint or handoff, at the end of a work block, before
+switching agents, after a merge, and before leaving work another session may resume. This is **not a
+background daemon and has no timer**: a reminder appears only when `checkpoint`, `handoff`, `resume`,
+or `sync status` runs.
+
+If you want a proactive reminder, wire the same read-only command into your own shell, scheduler, or
+client hook. A portable shell function is enough:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc; pass a project path or use the current directory.
+sync_reminder() {
+  python3 /path/to/skill-atlas/scripts/skill_atlas.py sync status --project "${1:-.}"
+}
+```
+
+`cron`, `launchd`, and agent-client hooks can call the same command, but each platform's scheduler
+and hook configuration differs; validate that yours runs and shows output. Do not auto-push from any
+of these reminders.
+
+A person decides what to do next: push only reviewed commits, never push credentials, private keys,
+or large binaries, and when `behind` is reported fetch first and then rebase or merge deliberately.
+Create a branch before continuing from a detached HEAD, and commit or explicitly discard local
+changes before handoff.
+
 ## Limitations
 
 - Example paths in this page are illustrative; platform conventions and agent tools
