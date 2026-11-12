@@ -3,8 +3,10 @@
 
 The audit answers one question: what on this machine is taking space that agent
 work produced? It only reads file metadata (never file contents, credentials or
-session text), never follows directory symlinks, never deletes or moves
-anything, and labels every candidate with a risk level and a suggested action.
+session text), never follows directory symlinks, and labels every candidate
+with a risk level and a suggested action. By default it never moves or deletes
+anything; an explicit ``--apply --to-trash --confirm`` moves selected low/medium
+risk candidates into the trash directory (never ``rm -rf``).
 
 Default scope is a set of known agent homes below the scanned home directory,
 plus optional ``--root`` and ``--project`` paths. Both apparent (``st_size``)
@@ -19,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -33,6 +36,11 @@ DEFAULT_MAX_ENTRIES = 400000
 RISK_LOW = "low"
 RISK_MEDIUM = "medium"
 RISK_HIGH = "high"
+CLEANUP_RISKS = (RISK_LOW, RISK_MEDIUM)
+
+
+class DiskScanError(ValueError):
+    """Unsafe or unsupported disk cleanup request."""
 
 
 @dataclass(frozen=True)
@@ -376,7 +384,7 @@ def scan(
     min_file_mb: float = DEFAULT_MIN_FILE_MB,
     max_entries: int = DEFAULT_MAX_ENTRIES,
 ) -> dict[str, Any]:
-    """Return a read-only disk audit for known agent homes and requested roots."""
+    """Return a disk audit; read-only unless the caller applies a Trash plan."""
     home = _normalize(Path(home))
     project = _normalize(Path(project)) if project is not None else None
     top_files = max(0, min(100, int(top_files)))
@@ -518,7 +526,7 @@ def scan(
             "Only metadata was read: no file contents, credentials, session text or account data were read, stored or uploaded.",
             "Directory symlinks are never followed, so linked roots and external volumes are not counted.",
             "Known roots are discovery hints and may be version-specific; paths that do not exist are omitted.",
-            "The audit is read-only. It never deletes, moves, compresses or archives anything; every suggestion is a plan for the user.",
+            "The scan is read-only. --apply --to-trash --confirm moves selected low/medium risk paths into the trash directory; it never deletes them permanently, and high-risk paths are never moved.",
             "Database and Git object sizes are reported for awareness only; deleting them directly can lose history or state.",
         ],
     }
@@ -531,8 +539,95 @@ def _safe_exists(path: Path) -> bool:
         return False
 
 
+def _unique_trash_path(trash_dir: Path, name: str) -> Path:
+    candidate = trash_dir / name
+    if not candidate.exists() and not candidate.is_symlink():
+        return candidate
+    stamp = utc_now().strftime("%Y%m%dT%H%M%S")
+    for index in range(1, 1000):
+        suffix = f"-{stamp}" if index == 1 else f"-{stamp}-{index}"
+        candidate = trash_dir / f"{name}{suffix}"
+        if not candidate.exists() and not candidate.is_symlink():
+            return candidate
+    raise DiskScanError("Could not find an unused name in the trash directory")
+
+
+def _inside(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+
+def apply_plan(
+    result: dict[str, Any],
+    *,
+    risks: Iterable[str],
+    trash_dir: Path,
+) -> dict[str, Any]:
+    """Move selected reclaimable paths into a trash directory (never delete)."""
+    selected = tuple(dict.fromkeys(risks))
+    invalid = [risk for risk in selected if risk not in CLEANUP_RISKS]
+    if invalid:
+        raise DiskScanError(
+            "Cleanup risks must be low or medium; high-risk paths are never moved"
+        )
+    if not selected:
+        raise DiskScanError("Select at least one cleanup risk")
+    trash_dir = _normalize(Path(trash_dir))
+    if not trash_dir.is_dir():
+        raise DiskScanError(f"Trash directory does not exist: {trash_dir}")
+    trash_real = _normalize(trash_dir)
+    moved: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    failed: list[dict[str, Any]] = []
+    for item in result.get("reclaimable", []):
+        if item.get("risk") not in selected:
+            continue
+        source = Path(item["path"])
+        if item.get("risk") == RISK_HIGH:
+            skipped.append({**item, "reason": "high-risk paths are never moved"})
+            continue
+        if source.is_symlink():
+            skipped.append({**item, "reason": "symlinks are not moved"})
+            continue
+        if not _safe_exists(source):
+            skipped.append({**item, "reason": "no longer exists"})
+            continue
+        source = _normalize(source)
+        if source == trash_real or _inside(trash_real, source) or _inside(source, trash_real):
+            skipped.append({**item, "reason": "path overlaps the trash directory"})
+            continue
+        try:
+            destination = _unique_trash_path(trash_real, source.name)
+            shutil.move(str(source), str(destination))
+        except (OSError, shutil.Error) as exc:
+            failed.append({**item, "reason": str(exc)})
+            continue
+        moved.append(
+            {
+                "path": _posix(source),
+                "trash_path": _posix(destination),
+                "size_bytes": item["size_bytes"],
+                "allocated_bytes": item["allocated_bytes"],
+                "category": item["category"],
+                "risk": item["risk"],
+            }
+        )
+    return {
+        "status": "applied" if moved else "no-candidates",
+        "trash_dir": _posix(trash_real),
+        "selected_risks": list(selected),
+        "moved": moved,
+        "skipped": skipped,
+        "failed": failed,
+        "reclaimed_allocated_bytes": sum(item["allocated_bytes"] for item in moved),
+    }
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
-    return scan(
+    result = scan(
         Path(args.home),
         roots=[Path(item) for item in getattr(args, "root", [])],
         project=Path(args.project) if getattr(args, "project", None) else None,
@@ -540,6 +635,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_file_mb=getattr(args, "min_file_mb", DEFAULT_MIN_FILE_MB),
         max_entries=getattr(args, "max_entries", DEFAULT_MAX_ENTRIES),
     )
+    if not getattr(args, "apply", False):
+        return result
+    if not getattr(args, "to_trash", False):
+        raise DiskScanError("--apply requires --to-trash; permanent deletion is not supported")
+    if not getattr(args, "confirm", False):
+        raise DiskScanError("--apply requires --confirm")
+    risks = list(getattr(args, "risk", None) or [RISK_LOW])
+    trash_dir = Path(getattr(args, "trash_dir", None) or (Path.home() / ".Trash"))
+    result["apply"] = apply_plan(result, risks=risks, trash_dir=trash_dir)
+    return result
 
 
 def _emit_root(root: dict[str, Any]) -> None:
@@ -603,6 +708,23 @@ def emit_markdown(result: dict[str, Any]) -> None:
             print(f"  - {item['suggested_action']}")
     else:
         print("- none")
+    if result.get("apply"):
+        applied = result["apply"]
+        print()
+        print("## Applied")
+        print()
+        print(f"- status: {applied['status']}")
+        print(f"- trash: `{applied['trash_dir']}`")
+        print(f"- selected risks: {', '.join(applied['selected_risks'])}")
+        print(f"- moved: {len(applied['moved'])}")
+        print(f"- reclaimed (allocated): {_human(applied['reclaimed_allocated_bytes'])}")
+        for item in applied["moved"]:
+            print(f"  - `{item['path']}` -> `{item['trash_path']}`")
+        for item in applied["skipped"]:
+            print(f"  - skipped `{item['path']}`: {item['reason']}")
+        for item in applied["failed"]:
+            print(f"  - failed `{item['path']}`: {item['reason']}")
+        print("- note: empty the trash to actually free the space")
     print()
     print("## Limitations")
     print()
@@ -629,6 +751,16 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--max-entries", type=int, default=DEFAULT_MAX_ENTRIES,
                         help="Stop after this many filesystem entries (safety limit).")
+    parser.add_argument("--apply", action="store_true",
+                        help="Move selected reclaimable paths to the trash; requires --to-trash and --confirm.")
+    parser.add_argument("--to-trash", action="store_true",
+                        help="Move selected paths into the trash directory; permanent deletion is never used.")
+    parser.add_argument("--confirm", action="store_true",
+                        help="Explicit confirmation for --apply.")
+    parser.add_argument("--risk", action="append", choices=CLEANUP_RISKS, default=[],
+                        help="Cleanup risk to move (low or medium); may be repeated. Default: low.")
+    parser.add_argument("--trash-dir", default=None,
+                        help="Trash directory (default: ~/.Trash); mainly for tests and external volumes.")
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
 
@@ -636,7 +768,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     add_arguments(parser)
     args = parser.parse_args()
-    result = run(args)
+    try:
+        result = run(args)
+    except DiskScanError as exc:
+        parser.error(str(exc))
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:

@@ -226,6 +226,112 @@ class DiskScanTests(unittest.TestCase):
         self.assertEqual(result["schema_version"], 1)
         self.assertIn("summary", result)
 
+    def apply_args(self, **overrides):
+        params = dict(
+            home=str(self.home),
+            root=[],
+            project=str(self.project),
+            top=disk_scan.DEFAULT_TOP_FILES,
+            min_file_mb=1.0,
+            max_entries=disk_scan.DEFAULT_MAX_ENTRIES,
+            apply=True,
+            to_trash=True,
+            confirm=True,
+            risk=["low"],
+            trash_dir=str(self.root / "trash"),
+            format="json",
+        )
+        params.update(overrides)
+        return argparse.Namespace(**params)
+
+    def make_trash(self) -> Path:
+        trash = self.root / "trash"
+        trash.mkdir(exist_ok=True)
+        return trash
+
+    def test_apply_moves_only_selected_risk_into_trash(self) -> None:
+        cache = self.make_file(".codex/cache/blob.bin", 2 * 1024 * 1024)
+        sessions = self.make_file(".codex/sessions/old.jsonl", 2 * 1024 * 1024)
+        self.make_trash()
+        result = disk_scan.run(self.apply_args())
+        applied = result["apply"]
+        self.assertEqual(applied["status"], "applied")
+        self.assertEqual(len(applied["moved"]), 1)
+        self.assertFalse(cache.exists())
+        self.assertTrue(sessions.exists())
+        moved = applied["moved"][0]
+        self.assertTrue(Path(moved["trash_path"]).exists())
+        self.assertGreater(applied["reclaimed_allocated_bytes"], 0)
+
+    def test_apply_medium_risk_must_be_requested(self) -> None:
+        sessions = self.make_file(".codex/sessions/old.jsonl", 2 * 1024 * 1024)
+        self.make_trash()
+        low = disk_scan.run(self.apply_args())
+        self.assertEqual(low["apply"]["status"], "no-candidates")
+        self.assertTrue(sessions.exists())
+        medium = disk_scan.run(self.apply_args(risk=["medium"]))
+        self.assertEqual(medium["apply"]["status"], "applied")
+        self.assertFalse(sessions.exists())
+
+    def test_apply_rejects_high_risk_and_missing_flags(self) -> None:
+        self.make_file(".codex/cache/blob.bin", 2 * 1024 * 1024)
+        self.make_trash()
+        with self.assertRaises(disk_scan.DiskScanError):
+            disk_scan.run(self.apply_args(risk=["high"]))
+        with self.assertRaises(disk_scan.DiskScanError):
+            disk_scan.run(self.apply_args(to_trash=False))
+        with self.assertRaises(disk_scan.DiskScanError):
+            disk_scan.run(self.apply_args(confirm=False))
+        with self.assertRaises(disk_scan.DiskScanError):
+            disk_scan.run(self.apply_args(trash_dir=str(self.root / "missing-trash")))
+
+    def test_apply_never_moves_high_risk_git_objects(self) -> None:
+        self.make_file(".git/objects/pack/pack.pack", 2 * 1024 * 1024, self.project)
+        self.make_file("node_modules/pkg/index.js", 2 * 1024 * 1024, self.project)
+        self.make_trash()
+        result = disk_scan.run(self.apply_args(risk=["low", "medium"]))
+        git_dir = self.project / ".git"
+        self.assertTrue(git_dir.exists())
+        self.assertFalse((self.project / "node_modules").exists())
+        self.assertTrue(all(item["category"] != "git-object" for item in result["apply"]["moved"]))
+
+    def test_apply_avoids_trash_name_collisions(self) -> None:
+        self.make_file(".codex/cache/blob.bin", 2 * 1024 * 1024)
+        trash = self.make_trash()
+        (trash / "cache").mkdir()
+        result = disk_scan.run(self.apply_args())
+        moved = result["apply"]["moved"][0]
+        self.assertNotEqual(Path(moved["trash_path"]).name, "cache")
+
+    def test_apply_cli_wiring(self) -> None:
+        cache = self.make_file(".codex/cache/blob.bin", 2 * 1024 * 1024)
+        self.make_trash()
+        args = skill_atlas.parse_args(
+            [
+                "disk", "scan",
+                "--home", str(self.home),
+                "--project", str(self.project),
+                "--apply", "--to-trash", "--confirm",
+                "--risk", "low",
+                "--trash-dir", str(self.root / "trash"),
+                "--format", "json",
+            ]
+        )
+        out = StringIO()
+        with redirect_stdout(out):
+            args.handler(args)
+        result = json.loads(out.getvalue())
+        self.assertEqual(result["apply"]["status"], "applied")
+        self.assertFalse(cache.exists())
+
+    def test_apply_without_candidates_is_noop(self) -> None:
+        self.make_trash()
+        self.make_file("media/only.bin", 2 * 1024 * 1024, self.project)
+        result = disk_scan.run(self.apply_args())
+        self.assertIn(result["apply"]["status"], ("no-candidates", "applied"))
+        if result["apply"]["status"] == "no-candidates":
+            self.assertEqual(result["apply"]["moved"], [])
+
     def test_manual_namespace_matches_arguments(self) -> None:
         namespace = argparse.Namespace(
             home=str(self.home),

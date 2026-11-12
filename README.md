@@ -253,7 +253,7 @@ $skill-atlas find Rhino and Blender skills, connectors, and missing capabilities
 Use Skill Atlas to compare my UX skill with public competitors without replacing mine.
 ```
 
-### Disk usage (read-only)
+### Disk usage (read-only by default)
 
 Agent work also leaves a lot of local data. `disk scan` audits known agent roots under your home plus repeated `--root` directories and one optional `--project`:
 
@@ -262,9 +262,11 @@ python3 scripts/skill_atlas.py disk scan
 python3 scripts/skill_atlas.py disk scan \
   --root ~/Documents/ChatGPT --root ~/Documents/Codex --min-file-mb 100
 python3 scripts/skill_atlas.py disk scan --project . --format json
+# Opt-in cleanup: move selected low/medium-risk candidates to Trash.
+python3 scripts/skill_atlas.py disk scan --apply --to-trash --confirm
 ```
 
-It reports both apparent and allocated sizes, categories, risk levels (low/medium/high), largest files by allocated size, and a suggested review list with plan-only actions. Allocated size (`st_blocks × 512`) is the real disk usage; apparent size (`st_size`) is the logical file length and can be far larger for sparse files, so file selection, ordering and risk totals use allocated bytes, and sizes are shown as `allocated (apparent)` when they differ. It reads metadata only: not file contents, credentials, or session text. It never follows symlinks while walking a tree, and never deletes, moves, compresses, or archives anything. Allocated size is not a promise of reclaimable space because clones, snapshots and hard links can share blocks, and databases or `.git` objects must not be deleted directly. Review before acting; see [Disk Usage Audit](docs/disk-scan.md).
+It reports both apparent and allocated sizes, categories, risk levels (low/medium/high), largest files by allocated size, and a suggested review list with plan-only actions. Allocated size (`st_blocks × 512`) is the real disk usage; apparent size (`st_size`) is the logical file length and can be far larger for sparse files, so file selection, ordering and risk totals use allocated bytes, and sizes are shown as `allocated (apparent)` when they differ. It reads metadata only: not file contents, credentials, or session text. It never follows symlinks while walking a tree, and by default never deletes, moves, compresses, or archives anything. Cleanup is opt-in: `--apply --to-trash --confirm` (with repeated `--risk low|medium`, default low) moves selected low/medium direct-child candidates into `~/.Trash` (or `--trash-dir`), never moves high-risk databases or `.git` objects or symlinks, never uses `rm -rf` or permanent deletion, and frees space only after you empty the Trash. Allocated size is not a promise of reclaimable space because clones, snapshots and hard links can share blocks, and databases or `.git` objects must not be deleted directly. Review before acting; see [Disk Usage Audit](docs/disk-scan.md).
 
 ## Start here
 
@@ -591,4 +593,4 @@ For the recommended local checkout, worktree, installation and archive layout �
 
 ## Status
 
-Skill Atlas is currently `0.9.1-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.10.0-beta`. Interfaces and platform adapters may change before the stable release.
