@@ -233,6 +233,35 @@ class HandoffTests(unittest.TestCase):
         self.assertEqual(result["status"], "notified")
         notifier.assert_called_once()
 
+    def test_sync_notify_test_notification(self):
+        args = self.notify_options(project=[], channel="macos", test_notification=True,
+                                   log=str(self.project / "notify.log"))
+        with patch.object(agent_handoff, "_send_macos_notification") as notifier:
+            result = agent_handoff.sync_notify(args)
+        self.assertEqual(result["status"], "test-notification")
+        notifier.assert_called_once()
+        self.assertTrue((self.project / "notify.log").exists())
+
+    def test_sync_notify_idle_suppression(self):
+        args = self.notify_options(project=[str(self.project)], idle_minutes=15,
+                                   log=str(self.project / "notify.log"))
+        with patch.object(agent_handoff, "_recent_activity", return_value=__import__("time").time()):
+            result = agent_handoff.sync_notify(args)
+        self.assertEqual(result["status"], "clean")
+        self.assertTrue(any(item.get("reason") == "recent activity" for item in result["suppressed"]))
+        with patch.object(agent_handoff, "_recent_activity", return_value=__import__("time").time() - 3600):
+            result = agent_handoff.sync_notify(self.notify_options(
+                project=[str(self.project)], idle_minutes=15,
+                log=str(self.project / "notify2.log")))
+        self.assertEqual(result["status"], "notified")
+
+    def test_sync_notify_writes_log(self):
+        log = self.project / "notify.log"
+        args = self.notify_options(project=[str(self.project)], log=str(log))
+        agent_handoff.sync_notify(args)
+        self.assertTrue(log.exists())
+        self.assertIn(str(self.project.resolve()), log.read_text())
+
     def test_sync_notify_cli_wiring(self):
         args = skill_atlas.parse_args(
             ["sync", "notify", "--project", str(self.project), "--channel", "json",
