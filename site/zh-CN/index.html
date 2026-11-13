@@ -19,6 +19,7 @@
       <a class="brand" href="../">Skill Atlas</a>
       <nav aria-label="主导航">
         <a href="#why">为什么</a>
+        <a href="#whats-new">新增</a>
         <a href="#demo">演示</a>
         <a href="#how">工作原理</a>
         <a href="#refuses">边界</a>
@@ -41,7 +42,7 @@
         <p class="positioning">你的本地 Agent 环境图谱</p>
         <p class="lede">
           Skill Atlas 会报告你机器上存在哪些编码 Agent，每个 Agent 从何处加载规则与 Skill，
-          你本地的 Skill Atlas 副本是否彼此不一致，以及同一个项目是否在多个位置存在且文档已产生差异。
+          你本地的 Skill Atlas 副本是否彼此不一致，以及同一个项目是否在多个位置存在且文档已产生差异。它也会审计 Agent 工作占用的磁盘空间，并在交接前提醒只存在于本机的提交。
           它是一个适用于 Codex、Claude Code、DeepSeek Harness、OpenCode、WorkBuddy、Kimi Code
           和其他 Agent 工具的 Skill。
         </p>
@@ -50,6 +51,25 @@
           <a class="button" href="https://github.com/Jorgut/skill-atlas">GitHub 源代码</a>
         </div>
         <pre id="install"><code>npx skills add Jorgut/skill-atlas</code></pre>
+      </section>
+
+      <section id="whats-new" aria-labelledby="whats-new-title">
+        <h2 id="whats-new-title">0.12 新增</h2>
+        <p class="section-note">代码写完之后，Agent 工作还有三件容易被忽略的事。</p>
+        <div class="grid three">
+          <div class="card">
+            <h3>磁盘审计</h3>
+            <p><code>disk scan</code> 报告 Agent 工作占用的磁盘空间：会话、缓存、媒体、构建产物和 Git 对象，并给出风险分级与可选的“移到废纸篓”清理。</p>
+          </div>
+          <div class="card">
+            <h3>推送提醒</h3>
+            <p><code>checkpoint</code> 和 <code>handoff</code> 现在会提醒“提交只在本机”或“落后远端”。<code>sync status</code> 可随时查看同样的证据，不会 fetch 或 push。</p>
+          </div>
+          <div class="card">
+            <h3>轻量通知</h3>
+            <p><code>sync notify</code> 可监控选定仓库及其 worktrees，只在确实需要推送时发 macOS 通知；干净时静默，绝不自动推送。</p>
+          </div>
+        </div>
       </section>
 
       <section id="why" aria-labelledby="why-title">
@@ -174,6 +194,8 @@
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-environments.md"><strong>本地 Agent 环境扫描</strong><span>证据等级与限制</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/project-root-audit.md"><strong>项目根目录审计</strong><span>重复副本与存在差异的文档</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md"><strong>Agent 交接消息</strong><span>信封、回执、审批</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/disk-scan.md"><strong>磁盘占用审计</strong><span>空间、风险、可选废纸篓清理</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/sync-notify.md"><strong>同步通知</strong><span>未推送提交、可选 hook</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/cli-reference.md"><strong>CLI 参考</strong><span>所有命令与标志</span></a>
         </div>
       </section>
@@ -182,7 +204,7 @@
 
   <footer>
     <div class="wrap">
-      <span>Skill Atlas · 本地优先，默认只读。</span>
+      <span>Skill Atlas · 0.12.0-beta · 本地优先，默认只读。</span>
       <span><a href="https://github.com/Jorgut/skill-atlas">GitHub</a> · <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/GETTING_STARTED.zh-CN.md">新手教程</a> · 无跟踪器、无 Cookie</span>
     </div>
   </footer>

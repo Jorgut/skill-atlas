@@ -19,6 +19,7 @@
       <a class="brand" href="../">Skill Atlas</a>
       <nav aria-label="Основная навигация">
         <a href="#why">Зачем</a>
+        <a href="#whats-new">Новое</a>
         <a href="#demo">Демо</a>
         <a href="#how">Как это работает</a>
         <a href="#refuses">Границы</a>
@@ -42,7 +43,7 @@
         <p class="lede">
           Skill Atlas показывает, какие агенты для программирования есть на вашей машине,
           откуда каждый из них загружает правила и навыки, совпадают ли ваши локальные копии Skill Atlas
-          и где один и тот же проект существует более чем в одном месте с разошедшимися документами.
+          и где один и тот же проект существует более чем в одном месте с разошедшимися документами. Он также показывает, сколько места занимает работа агентов, и напоминает о коммитах, которые есть только локально, перед передачей задачи.
           Это навык для Codex, Claude Code, DeepSeek Harness, OpenCode, WorkBuddy, Kimi Code
           и других инструментов агентов.
         </p>
@@ -51,6 +52,25 @@
           <a class="button" href="https://github.com/Jorgut/skill-atlas">Исходный код на GitHub</a>
         </div>
         <pre id="install"><code>npx skills add Jorgut/skill-atlas</code></pre>
+      </section>
+
+      <section id="whats-new" aria-labelledby="whats-new-title">
+        <h2 id="whats-new-title">Новое в 0.12</h2>
+        <p class="section-note">Три добавления для той части работы агентов, которая начинается после написания кода.</p>
+        <div class="grid three">
+          <div class="card">
+            <h3>Аудит диска</h3>
+            <p><code>disk scan</code> показывает, что занимает место: сессии, кеши, медиа, артефакты сборки и объекты Git, — с уровнями риска и опциональной очисткой в Корзину.</p>
+          </div>
+          <div class="card">
+            <h3>Напоминания о push</h3>
+            <p><code>checkpoint</code> и <code>handoff</code> теперь предупреждают, если коммиты есть только локально или ветка отстала. <code>sync status</code> показывает те же данные по запросу, без fetch и push.</p>
+          </div>
+          <div class="card">
+            <h3>Лёгкие уведомления</h3>
+            <p><code>sync notify</code> следит за выбранными репозиториями и их worktree и присылает уведомление macOS только когда push действительно нужен. Молчит, когда всё чисто; никогда не делает push автоматически.</p>
+          </div>
+        </div>
       </section>
 
       <section id="why" aria-labelledby="why-title">
@@ -178,6 +198,8 @@
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-environments.md"><strong>Сканирование локальной среды агентов</strong><span>Уровни доказательств и ограничения</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/project-root-audit.md"><strong>Аудит корневых каталогов проектов</strong><span>Дубликаты копий и разошедшиеся документы</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md"><strong>Сообщения о передаче между агентами</strong><span>Конверты, квитанция, одобрение</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/disk-scan.md"><strong>Аудит диска</strong><span>Место, риск, опциональная очистка</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/sync-notify.md"><strong>Уведомления о синхронизации</strong><span>Неотправленные коммиты, опциональные хуки</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/cli-reference.md"><strong>Справочник CLI</strong><span>Каждая команда и флаг</span></a>
         </div>
       </section>
@@ -186,7 +208,7 @@
 
   <footer>
     <div class="wrap">
-      <span>Skill Atlas · приоритет локальной работы, только для чтения по умолчанию.</span>
+      <span>Skill Atlas · 0.12.0-beta · приоритет локальной работы, только для чтения по умолчанию.</span>
       <span><a href="https://github.com/Jorgut/skill-atlas">GitHub</a> · <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/GETTING_STARTED.ru.md">Руководство для начинающих</a> · без трекеров и cookie</span>
     </div>
   </footer>

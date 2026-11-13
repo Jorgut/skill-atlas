@@ -52,8 +52,8 @@ python3 scripts/skill_atlas.py agents scan
 
 ## Skill Atlas copies
 
-- `~/.cc-switch/skills/skill-atlas`: 0.8.0-beta
-- `~/.agents/skills/skill-atlas`: 0.8.0-beta
+- `~/.cc-switch/skills/skill-atlas`: 0.12.0-beta
+- `~/.agents/skills/skill-atlas`: 0.12.0-beta
 ...
 ```
 

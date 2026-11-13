@@ -19,6 +19,7 @@
       <a class="brand" href="./">Skill Atlas</a>
       <nav aria-label="Main">
         <a href="#why">Why</a>
+        <a href="#whats-new">New</a>
         <a href="#demo">Demo</a>
         <a href="#how">How it works</a>
         <a href="#refuses">Boundaries</a>
@@ -42,7 +43,7 @@
         <p class="lede">
           Skill Atlas reports which coding agents exist on your machine, where each one loads rules and skills from,
           whether your local Skill Atlas copies disagree, and where the same project exists in more than one place
-          with drifted documents. It is a skill for Codex, Claude Code, DeepSeek Harness, OpenCode, WorkBuddy,
+          with drifted documents. It also audits what agent work leaves on disk and reminds you about local-only commits before a handoff. It is a skill for Codex, Claude Code, DeepSeek Harness, OpenCode, WorkBuddy,
           Kimi Code and other agent tools.
         </p>
         <div class="actions">
@@ -50,6 +51,25 @@
           <a class="button" href="https://github.com/Jorgut/skill-atlas">Source on GitHub</a>
         </div>
         <pre id="install"><code>npx skills add Jorgut/skill-atlas</code></pre>
+      </section>
+
+      <section id="whats-new" aria-labelledby="whats-new-title">
+        <h2 id="whats-new-title">New in 0.12</h2>
+        <p class="section-note">Three additions for the part of agent work that happens after the code exists.</p>
+        <div class="grid three">
+          <div class="card">
+            <h3>Disk audit</h3>
+            <p><code>disk scan</code> reports what agent work uses on disk — sessions, caches, media, build artifacts and Git objects — with risk levels and an opt-in move-to-Trash cleanup.</p>
+          </div>
+          <div class="card">
+            <h3>Push reminders</h3>
+            <p><code>checkpoint</code> and <code>handoff</code> now warn when commits are local-only or behind the remote. <code>sync status</code> shows the same evidence on demand, without fetching or pushing.</p>
+          </div>
+          <div class="card">
+            <h3>Lightweight notifications</h3>
+            <p><code>sync notify</code> can watch chosen repositories and their worktrees, then send a macOS notification only when a push is actually needed. Silent when clean; never auto-pushes.</p>
+          </div>
+        </div>
       </section>
 
       <section id="why" aria-labelledby="why-title">
@@ -174,6 +194,8 @@
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-environments.md"><strong>Local agent environment scan</strong><span>Evidence levels and limitations</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/project-root-audit.md"><strong>Project root audit</strong><span>Duplicate copies and divergent docs</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md"><strong>Agent handoff messages</strong><span>Envelopes, receipts, approval</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/disk-scan.md"><strong>Disk usage audit</strong><span>Space, risk, opt-in Trash</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/sync-notify.md"><strong>Sync notifications</strong><span>Unpushed commits, opt-in hooks</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/cli-reference.md"><strong>CLI reference</strong><span>Every command and flag</span></a>
         </div>
       </section>
@@ -182,7 +204,7 @@
 
   <footer>
     <div class="wrap">
-      <span>Skill Atlas · local-first, read-only by default.</span>
+      <span>Skill Atlas · 0.12.0-beta · local-first, read-only by default.</span>
       <span><a href="https://github.com/Jorgut/skill-atlas">GitHub</a> · <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/GETTING_STARTED.en.md">Beginner guide</a> · no trackers, no cookies</span>
     </div>
   </footer>
