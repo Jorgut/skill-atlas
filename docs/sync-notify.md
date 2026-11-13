@@ -10,7 +10,7 @@ everything is clean.
 
 ![Target macOS notification: Skill Atlas banner with repository, branch, and unpushed count](assets/sync-notification-mockup.en.png)
 
-*UI target for the FlowCue Pro surface. The current lightweight `osascript` notification may show Script Editor as the app name and has no custom buttons.*
+*UI target for the [FlowCue Pro](https://github.com/Jorgut/flowcue) surface. The current lightweight `osascript` notification may show Script Editor as the app name and has no custom buttons.*
 
 It exists so that the same warnings already recorded by `checkpoint` and
 `handoff` can also reach you from a hook, a scheduler, or a shell alias without
