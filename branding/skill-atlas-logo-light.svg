@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-label="Skill Atlas logo, light">
+  <g transform="translate(40 40) scale(0.235)">
+    <rect width="1024" height="1024" rx="228" fill="#0b3d62"/>
+    <rect width="1024" height="1024" rx="228" fill="none" stroke="#ecfff9" stroke-opacity="0.18" stroke-width="8"/>
+    <circle cx="512" cy="512" r="332" fill="none" stroke="#c9fff0" stroke-opacity="0.40" stroke-width="20"/>
+    <path d="M512 238 L604 512 L512 470 L420 512 Z" fill="#ecfff9"/>
+    <path d="M512 786 L604 512 L512 554 L420 512 Z" fill="#8fe3d0" opacity="0.9"/>
+    <circle cx="512" cy="512" r="40" fill="#0b3d62" stroke="#ecfff9" stroke-width="20"/>
+  </g>
+  <text x="330" y="155" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="92" font-weight="700" letter-spacing="-3" fill="#ecfff9">Skill Atlas</text>
+  <text x="334" y="215" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" font-weight="500" letter-spacing="0.2" fill="#a9d8ce">The local agent environment atlas</text>
+</svg>

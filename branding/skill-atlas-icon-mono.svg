@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Skill Atlas icon, monochrome">
+  <g fill="none" stroke="#0b3d62" stroke-linecap="round">
+    <circle cx="512" cy="512" r="332" stroke-opacity="0.38" stroke-width="20"/>
+    <circle cx="512" cy="512" r="258" stroke-opacity="0.18" stroke-width="12"/>
+  </g>
+  <path d="M512 238 L604 512 L512 470 L420 512 Z" fill="#0b3d62"/>
+  <path d="M512 786 L604 512 L512 554 L420 512 Z" fill="#0b3d62" opacity="0.55"/>
+  <circle cx="512" cy="512" r="40" fill="none" stroke="#0b3d62" stroke-width="20"/>
+  <g fill="#0b3d62">
+    <circle cx="512" cy="180" r="24"/>
+    <circle cx="800" cy="678" r="24"/>
+    <circle cx="224" cy="678" r="24"/>
+  </g>
+</svg>

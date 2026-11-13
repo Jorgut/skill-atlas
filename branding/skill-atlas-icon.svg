@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Skill Atlas icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b3d62"/>
+      <stop offset="0.55" stop-color="#0e6f6a"/>
+      <stop offset="1" stop-color="#13a08b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.28" cy="0.18" r="0.85">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0.04"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="228" fill="url(#glow)"/>
+  <!-- topographic rings -->
+  <g fill="none" stroke="#c9fff0" stroke-linecap="round">
+    <circle cx="512" cy="512" r="332" stroke-opacity="0.30" stroke-width="20"/>
+    <circle cx="512" cy="512" r="258" stroke-opacity="0.14" stroke-width="12"/>
+    <path d="M174 600 C300 540 372 660 512 610 C652 560 724 680 850 620" stroke-opacity="0.13" stroke-width="14"/>
+    <path d="M174 676 C300 616 372 736 512 686 C652 636 724 756 850 696" stroke-opacity="0.10" stroke-width="10"/>
+  </g>
+  <!-- compass needle -->
+  <path d="M512 238 L604 512 L512 470 L420 512 Z" fill="#ecfff9"/>
+  <path d="M512 786 L604 512 L512 554 L420 512 Z" fill="#8fe3d0" opacity="0.82"/>
+  <circle cx="512" cy="512" r="40" fill="#0b3d62" stroke="#ecfff9" stroke-width="20"/>
+  <!-- three skill nodes -->
+  <g fill="#ecfff9">
+    <circle cx="512" cy="180" r="24"/>
+    <circle cx="800" cy="678" r="24"/>
+    <circle cx="224" cy="678" r="24"/>
+  </g>
+  <g fill="#0b3d62">
+    <circle cx="512" cy="180" r="9"/>
+    <circle cx="800" cy="678" r="9"/>
+    <circle cx="224" cy="678" r="9"/>
+  </g>
+</svg>

@@ -4,6 +4,8 @@
 
 Website: [jorgut.github.io/skill-atlas](https://jorgut.github.io/skill-atlas/)
 
+Brand: [logo draft](branding/README.md) · [trademark policy](TRADEMARK.md)
+
 **The local agent environment atlas** — what your agents see, what they load, where copies diverge.
 
 [![skills.sh](https://img.shields.io/badge/skills.sh-Jorgut/skill--atlas-8A2BE2?style=flat-square)](https://skills.sh/Jorgut/skill-atlas)
