@@ -202,6 +202,32 @@ or large binaries, and when `behind` is reported fetch first and then rebase or 
 Create a branch before continuing from a detached HEAD, and commit or explicitly discard local
 changes before handoff.
 
+### Lightweight notifications (`sync notify`)
+
+`sync notify` runs the same checks across one or more repositories and every
+worktree they contain, and notifies only when a worktree is actionable (no
+upstream, unpushed commits, behind, detached HEAD; dirty only with
+`--include-dirty`). It is still opt-in and one-shot — no daemon and no timer:
+
+```bash
+python3 /path/to/skill-atlas/scripts/skill_atlas.py sync notify --project .
+python3 /path/to/skill-atlas/scripts/skill_atlas.py sync notify \
+  --registry ~/.config/skill-atlas/projects.json --channel stderr
+```
+
+The default channel is a macOS notification (via `osascript`; macOS may show
+"Script Editor" as the app and there are no custom buttons); `stderr` and `json`
+are available for hooks and scripts. It is silent when clean and deduplicates
+identical state per worktree through a local state file and `--min-interval`
+(default 60 minutes). `--fetch` is off by default and only updates
+remote-tracking refs; it never pushes, merges, or commits.
+
+To make the reminder proactive, wire `sync notify` into your own shell alias,
+Claude Code/Codex hook, or launchd/cron job. Keep hooks compact: notifications
+themselves do not consume model tokens, but a per-turn hook that feeds output
+back to the model can add context tokens. Never add an auto-push step. Concrete
+hook/launchd examples and caveats are in [Sync Notifications](sync-notify.md).
+
 ## Limitations
 
 - Example paths in this page are illustrative; platform conventions and agent tools

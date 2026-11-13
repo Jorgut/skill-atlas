@@ -41,7 +41,7 @@ External hits are typed metadata candidates, not reviewed installation recommend
 
 ## Cross-Agent Context and Handoff
 
-When asked to connect agent tools, organize per-project memory, or verify shared context, read [docs/cross-agent-collaboration.md](docs/cross-agent-collaboration.md). Discover each tool's actual instruction entry, reuse existing project state, and distinguish configured files from verified loading and handoff. Rule-entry setup is agent-led; the optional task checkpoint CLI is described under Integrated Closeout and task continuity. After `checkpoint` or `handoff`, surface any unpushed or no-upstream warnings instead of treating the handoff as complete. During sustained iteration, run `sync status` at milestones and at the end of a work block; never push automatically. Apply setup changes only within the user's authorized scope and preserve backups and concurrent work.
+When asked to connect agent tools, organize per-project memory, or verify shared context, read [docs/cross-agent-collaboration.md](docs/cross-agent-collaboration.md). Discover each tool's actual instruction entry, reuse existing project state, and distinguish configured files from verified loading and handoff. Rule-entry setup is agent-led; the optional task checkpoint CLI is described under Integrated Closeout and task continuity. After `checkpoint` or `handoff`, surface any unpushed or no-upstream warnings instead of treating the handoff as complete. During sustained iteration, run `sync status` at milestones and at the end of a work block; never push automatically. The opt-in `sync notify` command checks explicit projects/registry and their worktrees, notifies only actionable warnings (silent when clean, deduplicated), and never auto-pushes. Apply setup changes only within the user's authorized scope and preserve backups and concurrent work.
 
 For WorkBuddy setup, read the WorkBuddy adapter discovery section in that guide; verify its effective rules root, project-guidance precedence, account scope, and loading conditions.
 
@@ -164,7 +164,8 @@ skill-atlas
 │   ├── history    compare saved snapshots over time
 │   └── remove     remove configuration while retaining snapshots
 ├── sync
-│   └── status     read-only Git sync reminder for handoff and milestones
+│   ├── status     read-only Git sync reminder for handoff and milestones
+│   └── notify     opt-in sync notification; silent when clean, never pushes
 ├── agents
 │   └── scan       read-only local evidence for agent tools, rules, and skills
 ├── disk
@@ -179,7 +180,7 @@ skill-atlas
     └── approve    record a person's approval before completion
 ```
 
-Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. The `message` actions write only under `.agent-state/messages/`; they do not contact another agent or modify project files. `message approve` records a person's local approval and must not be run on another person's behalf. `agents scan` reads filesystem metadata and local Skill Atlas manifests only; it never executes an agent tool and writes nothing. `disk scan` reads file metadata only; it never reads file contents, follows symlinks while walking, or deletes, moves, compresses, or archives anything. `projects audit` reads metadata, small `.git` files, and documentation hashes only; it never runs git and writes nothing. `sync status` reads local Git metadata only; it never fetches, pushes, commits, or rebases. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
+Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. The `message` actions write only under `.agent-state/messages/`; they do not contact another agent or modify project files. `message approve` records a person's local approval and must not be run on another person's behalf. `agents scan` reads filesystem metadata and local Skill Atlas manifests only; it never executes an agent tool and writes nothing. `disk scan` reads file metadata only; it never reads file contents, follows symlinks while walking, or deletes, moves, compresses, or archives anything. `projects audit` reads metadata, small `.git` files, and documentation hashes only; it never runs git and writes nothing. `sync status` reads local Git metadata only; it never fetches, pushes, commits, or rebases. `sync notify` reads local Git metadata and notifies; it never pushes, commits, or merges, and never fetches unless `--fetch` is supplied. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
 
 Agent command syntax varies. If a platform does not pass arguments after `$skill-atlas` or does not support dollar-prefixed skill calls, accept equivalent natural language such as "Use Skill Atlas manage" or "用 Skill Atlas 编排这个任务". Preserve these command meanings across platforms.
 
@@ -524,6 +525,7 @@ For task continuity use the platform-neutral commands in
 - `handoff`: record what was completed, what remains, and the next safe action.
 - `resume`: perform read-only verification before accepting a handoff.
 - `sync status`: read-only Git branch/upstream/ahead/behind/dirty check for handoff reminders; never fetches or pushes.
+- `sync notify`: opt-in notification for explicit projects/registry and their worktrees; silent when clean, deduplicated, never pushes.
 - `closeout audit`: run bundled read-only project inventory.
 - `closeout evals`: validate bundled Closeout evaluation cases.
 
