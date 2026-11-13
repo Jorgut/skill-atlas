@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
+from contextlib import redirect_stdout
+from io import StringIO
+from unittest.mock import patch
 import sys
 import tempfile
 import unittest
@@ -10,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import agent_handoff  # noqa: E402
+import skill_atlas  # noqa: E402
 
 
 def git(directory: Path, *argv: str) -> None:
@@ -144,6 +149,100 @@ class HandoffTests(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertEqual(report["status"], "ok")
         self.assertIn("warnings", report)
+
+    def notify_options(self, **overrides):
+        params = dict(
+            project=[],
+            registry=None,
+            channel="json",
+            min_interval=60,
+            state=str(self.project.parent / "notify-state.json") if False else str(self.project / "notify-state.json"),
+            fetch=False,
+            fetch_timeout=10,
+            include_dirty=False,
+        )
+        params.update(overrides)
+        return argparse.Namespace(**params)
+
+    def test_sync_notify_dedupes_same_state(self):
+        args = self.notify_options(project=[str(self.project)])
+        first = agent_handoff.sync_notify(args)
+        self.assertEqual(first["status"], "notified")
+        self.assertEqual(len(first["notified"]), 1)
+        second = agent_handoff.sync_notify(args)
+        self.assertEqual(second["status"], "clean")
+        self.assertEqual(len(second["suppressed"]), 1)
+
+    def test_sync_notify_clean_pushed_repo_is_silent(self):
+        remote = self.make_remote()
+        git(self.project, "remote", "add", "origin", str(remote))
+        git(self.project, "push", "-q", "-u", "origin", "HEAD")
+        args = self.notify_options(project=[str(self.project)], channel="stderr")
+        out = StringIO()
+        with redirect_stdout(out):
+            result = agent_handoff.sync_notify(args)
+        self.assertEqual(result["status"], "clean")
+        self.assertEqual(out.getvalue(), "")
+
+    def test_sync_notify_includes_linked_worktrees(self):
+        worktree_temp = tempfile.TemporaryDirectory(prefix="skill-atlas-wt-")
+        self.addCleanup(worktree_temp.cleanup)
+        worktree = Path(worktree_temp.name) / "linked"
+        git(self.project, "worktree", "add", "-q", "-b", "linked-branch", str(worktree))
+        args = self.notify_options(project=[str(self.project)], state=str(Path(worktree_temp.name) / "state.json"))
+        result = agent_handoff.sync_notify(args)
+        self.assertGreaterEqual(result["checked"], 2)
+        paths = {item["path"] for item in result["notified"]}
+        self.assertIn(str(self.project.resolve()), paths)
+        self.assertIn(str(worktree.resolve()), paths)
+
+    def test_sync_notify_registry_and_requires_targets(self):
+        registry = self.project / "registry.json"
+        registry.write_text(json.dumps({"projects": [str(self.project)]}))
+        args = self.notify_options(project=[], registry=str(registry))
+        result = agent_handoff.sync_notify(args)
+        self.assertEqual(result["status"], "notified")
+        with self.assertRaises(agent_handoff.HandoffError):
+            agent_handoff.sync_notify(self.notify_options())
+
+    def test_sync_notify_fetch_detects_behind(self):
+        remote = self.make_remote()
+        git(self.project, "remote", "add", "origin", str(remote))
+        git(self.project, "push", "-q", "-u", "origin", "HEAD")
+        other_temp = tempfile.TemporaryDirectory(prefix="skill-atlas-other-")
+        self.addCleanup(other_temp.cleanup)
+        other = Path(other_temp.name) / "other"
+        subprocess.run(["git", "clone", "-q", str(remote), str(other)], check=True)
+        git(other, "config", "user.email", "test@example.invalid")
+        git(other, "config", "user.name", "Tests")
+        (other / "remote.txt").write_text("remote\n")
+        git(other, "add", "remote.txt")
+        git(other, "commit", "-qm", "remote change")
+        git(other, "push", "-q")
+        state = str(Path(other_temp.name) / "state.json")
+        without = agent_handoff.sync_notify(self.notify_options(project=[str(self.project)], state=state))
+        self.assertEqual(without["notified"], [])
+        with_fetch = agent_handoff.sync_notify(self.notify_options(project=[str(self.project)], state=state, fetch=True))
+        self.assertEqual(with_fetch["status"], "notified")
+        self.assertTrue(any("behind remote" in warning for item in with_fetch["notified"] for warning in item["warnings"]))
+
+    def test_sync_notify_macos_channel_calls_notifier(self):
+        args = self.notify_options(project=[str(self.project)], channel="macos")
+        with patch.object(agent_handoff, "_send_macos_notification") as notifier:
+            result = agent_handoff.sync_notify(args)
+        self.assertEqual(result["status"], "notified")
+        notifier.assert_called_once()
+
+    def test_sync_notify_cli_wiring(self):
+        args = skill_atlas.parse_args(
+            ["sync", "notify", "--project", str(self.project), "--channel", "json",
+             "--state", str(self.project / "cli-state.json")]
+        )
+        out = StringIO()
+        with redirect_stdout(out):
+            args.handler(args)
+        result = json.loads(out.getvalue())
+        self.assertEqual(result["status"], "notified")
 
     def test_rejects_unsafe_task_identifier(self):
         with self.assertRaises(agent_handoff.HandoffError):

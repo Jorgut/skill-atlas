@@ -937,6 +937,15 @@ def handle_disk(args: argparse.Namespace) -> None:
 
 
 def handle_sync(args: argparse.Namespace) -> None:
+    if args.action == "notify":
+        try:
+            result = agent_handoff.sync_notify(args)
+        except agent_handoff.HandoffError as exc:
+            print(f"Skill Atlas sync notify refused: {exc}", file=sys.stderr)
+            raise SystemExit(2) from None
+        if args.channel == "json":
+            json_print(result)
+        return
     result = agent_handoff.sync_report(args)
     if args.format == "json":
         json_print(result)
@@ -961,6 +970,11 @@ def add_sync_commands(subparsers: argparse._SubParsersAction) -> None:
     )
     agent_handoff.add_sync_arguments(status)
     status.set_defaults(handler=handle_sync)
+    notify = actions.add_parser(
+        "notify", help="Notify only when registered projects have unpushed or local-only commits."
+    )
+    agent_handoff.add_notify_arguments(notify)
+    notify.set_defaults(handler=handle_sync)
 
 
 def add_disk_commands(subparsers: argparse._SubParsersAction) -> None:

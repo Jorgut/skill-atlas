@@ -173,20 +173,53 @@ python3 <skill-root>/scripts/skill_atlas.py sync status --project . --format jso
 
 `sync status` reports:
 
-- `branch`, `upstream`, `has_upstream`, `ahead`, `behind`, `dirty`, `detached`, `last_commit`;
+- `branch`, `upstream`, `has_upstream`, `ahead`, `behind`, `dirty`, `detached`, `last_commit`, `commit`;
 - `warnings` for no upstream, unpushed commits (`ahead`), a remote-tracking branch ahead
   (`behind`), uncommitted changes (`dirty`), and detached HEAD;
 - `tracking_refs_may_be_stale` and a note that no fetch or network call was made.
 
 Markdown prints `# Git sync status`, the branch, upstream (or `none`), ahead/behind/dirty counts,
 each warning, and the read-only note. JSON returns
-`{status: "ok", project, git: {...}, warnings, notes}`.
+`{status: "ok", project, git: {...}, warnings, notes}`; the `git` object also carries
+`commit` (the current HEAD) for callers that deduplicate state.
 
 `checkpoint`/`handoff` results carry `checkpoint.git.sync` with the same fields plus the top-level
 `warnings`; `resume` returns `current_git.sync` and current warnings. The saved checkpoint under
 `.agent-state/tasks/<task>.json` embeds `git.sync` in its `git` object. No command fetches, pushes,
 commits, rebases, switches branches, opens a network connection, or starts an agent. Because no fetch
 is performed, `ahead`/`behind` reflect local tracking refs and may be stale.
+
+### `sync notify`
+
+`sync notify` is the opt-in batch notifier for one or more repositories and their
+worktrees. It is silent when clean, deduplicates identical state, and never
+pushes, commits, or merges.
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py sync notify --project .
+python3 <skill-root>/scripts/skill_atlas.py sync notify \
+  --registry ~/.config/skill-atlas/projects.json --channel stderr
+python3 <skill-root>/scripts/skill_atlas.py sync notify \
+  --project ~/repos/one --project ~/repos/two --channel json
+```
+
+Flags: repeated `--project PATH`; `--registry PATH` (JSON list or an object with a
+`projects` list); `--channel macos|stderr|json` (default `macos`); `--min-interval
+MINUTES` (default 60); `--state PATH` (default
+`~/.cache/skill-atlas/sync-notify.json`); `--fetch` (off by default; only updates
+remote-tracking refs); `--fetch-timeout SECONDS` (default 10); `--include-dirty`
+(off by default). Actionable conditions are no upstream, unpushed commits,
+behind remote, and detached HEAD; dirty state is actionable only with
+`--include-dirty`. At least one target is required.
+
+`--channel json` returns `{status, channel, checked, notified, suppressed,
+skipped, fetch_errors, state_file, fetch, notes}`. `status` is `notified` when at
+least one worktree was newly actionable, otherwise `clean` (including when all
+actionable states were suppressed). Each `notified`/`suppressed` entry has
+`project`, `path`, `branch`, `has_upstream`, `ahead`, `behind`, `dirty`,
+`detached`, `commit`, and `warnings`; `skipped` entries add `reason` and
+`fetch_errors` entries add `error`. See [Sync Notifications](sync-notify.md) for
+channels, deduplication, optional fetch, macOS caveats, and wiring examples.
 
 See [Installation and Development Layout](development-layout.md#push-before-you-hand-off-and-during-long-work)
 for recommended cadence, optional shell/scheduler/hook wiring, and the rule to never auto-push.

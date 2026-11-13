@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 import tempfile
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -106,6 +107,10 @@ def sync_status(root: Path) -> dict[str, Any]:
         last_commit = git(root, "log", "-1", "--format=%cI")
     except HandoffError:
         last_commit = None
+    try:
+        commit = git(root, "rev-parse", "HEAD")
+    except HandoffError:
+        commit = None
     warnings: list[str] = []
     if detached:
         warnings.append("Detached HEAD: commits are not on a branch and are easy to lose; create a branch before continuing")
@@ -127,6 +132,7 @@ def sync_status(root: Path) -> dict[str, Any]:
         "dirty": dirty,
         "detached": detached,
         "last_commit": last_commit,
+        "commit": commit,
         "warnings": warnings,
         "tracking_refs_may_be_stale": upstream is not None,
         "notes": notes,
@@ -143,6 +149,200 @@ def sync_report(args: argparse.Namespace) -> dict[str, Any]:
         "warnings": status["warnings"],
         "notes": "Read-only local Git status; no fetch, push or repository mutation executed",
     }
+
+
+def worktree_paths(root: Path) -> list[Path]:
+    """Return the main and linked worktrees for a repository."""
+    raw = git(root, "worktree", "list", "--porcelain")
+    paths = []
+    for line in raw.splitlines():
+        if line.startswith("worktree "):
+            paths.append(Path(line[len("worktree "):]).resolve())
+    if not paths:
+        paths = [root]
+    unique = []
+    seen = set()
+    for path in paths:
+        if path not in seen:
+            seen.add(path)
+            unique.append(path)
+    return unique
+
+
+def load_registry(path: Path) -> list[Path]:
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise HandoffError(f"Registry is unreadable: {path}") from exc
+    if isinstance(data, dict):
+        data = data.get("projects")
+    if not isinstance(data, list) or not all(isinstance(item, str) for item in data):
+        raise HandoffError("Registry must be a JSON list or an object with a 'projects' list")
+    return [Path(item) for item in data]
+
+
+def fetch_remotes(root: Path, timeout: float) -> str | None:
+    """Fetch one repository's remotes; return an error note instead of raising."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "fetch", "--quiet", "--prune"],
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return str(exc)
+    if result.returncode != 0:
+        return result.stderr.decode("utf-8", "replace").strip() or f"git fetch exited {result.returncode}"
+    return None
+
+
+def _compact_notification(items: list[dict[str, Any]]) -> tuple[str, str, str]:
+    title = "Skill Atlas"
+    plural = "s" if len(items) != 1 else ""
+    verb = "need" if len(items) != 1 else "needs"
+    subtitle = f"{len(items)} project{plural} {verb} a push"
+    parts = []
+    for item in items[:3]:
+        label = Path(item["path"]).name
+        if not item["has_upstream"]:
+            detail = "no upstream"
+        elif item["ahead"]:
+            detail = f"{item['ahead']} unpushed"
+        elif item["behind"]:
+            detail = f"behind {item['behind']}"
+        elif item["detached"]:
+            detail = "detached HEAD"
+        else:
+            detail = "needs review"
+        parts.append(f"{label} · {item['branch']}: {detail}")
+    body = "; ".join(parts)
+    if len(items) > 3:
+        body += f"; +{len(items) - 3} more"
+    return title, subtitle, body
+
+
+def _send_macos_notification(title: str, subtitle: str, body: str) -> None:
+    def quote(value: str) -> str:
+        return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    script = f"display notification {quote(body)} with title {quote(title)} subtitle {quote(subtitle)}"
+    try:
+        subprocess.run(["osascript", "-e", script], capture_output=True, timeout=15, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return
+
+
+def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
+    """Check registered projects and notify only when a push-related warning appears."""
+    projects: list[Path] = [Path(item) for item in getattr(args, "project", [])]
+    registry = getattr(args, "registry", None)
+    if registry:
+        projects.extend(load_registry(Path(registry)))
+    if not projects:
+        raise HandoffError("Provide at least one --project or a --registry file")
+    channel = getattr(args, "channel", "macos")
+    min_interval = max(0.0, float(getattr(args, "min_interval", 60)))
+    include_dirty = bool(getattr(args, "include_dirty", False))
+    do_fetch = bool(getattr(args, "fetch", False))
+    state_path = Path(getattr(args, "state", None) or (Path.home() / ".cache" / "skill-atlas" / "sync-notify.json"))
+    fetch_timeout = max(1.0, float(getattr(args, "fetch_timeout", 10)))
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.is_file() else {}
+    except (OSError, ValueError):
+        state = {}
+    if not isinstance(state, dict):
+        state = {}
+    now = time.time()
+    actionable: list[dict[str, Any]] = []
+    suppressed: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    seen_paths: set[str] = set()
+    fetch_errors: list[dict[str, str]] = []
+    for project in projects:
+        try:
+            root = repo_root(project)
+        except HandoffError as exc:
+            skipped.append({"project": str(project), "reason": str(exc)})
+            continue
+        if do_fetch:
+            error = fetch_remotes(root, fetch_timeout)
+            if error:
+                fetch_errors.append({"project": str(root), "error": error})
+        for path in worktree_paths(root):
+            key_path = str(path)
+            if key_path in seen_paths:
+                continue
+            seen_paths.add(key_path)
+            try:
+                status = sync_status(path)
+            except HandoffError as exc:
+                skipped.append({"project": key_path, "reason": str(exc)})
+                continue
+            warnings = []
+            if status["detached"]:
+                warnings.append("detached HEAD")
+            if not status["has_upstream"]:
+                warnings.append("no upstream")
+            if status["ahead"]:
+                warnings.append(f"{status['ahead']} unpushed commit(s)")
+            if status["behind"]:
+                warnings.append(f"behind remote by {status['behind']} commit(s)")
+            if include_dirty and status["dirty"]:
+                warnings.append(f"{status['dirty']} uncommitted change(s)")
+            if not warnings:
+                continue
+            item = {
+                "project": str(root),
+                "path": key_path,
+                "branch": status["branch"],
+                "has_upstream": status["has_upstream"],
+                "ahead": status["ahead"],
+                "behind": status["behind"],
+                "dirty": status["dirty"],
+                "detached": status["detached"],
+                "commit": status["commit"],
+                "warnings": warnings,
+            }
+            key = "|".join(str(item[field]) for field in
+                           ("path", "branch", "commit", "ahead", "behind", "has_upstream", "detached"))
+            previous = state.get(key_path) or {}
+            fresh_enough = (
+                previous.get("key") == key
+                and (now - float(previous.get("notified_at", 0))) < min_interval * 60
+            )
+            if fresh_enough:
+                suppressed.append(item)
+            else:
+                actionable.append(item)
+                state[key_path] = {"key": key, "notified_at": now}
+    if actionable:
+        title, subtitle, body = _compact_notification(actionable)
+        if channel == "macos":
+            _send_macos_notification(title, subtitle, body)
+        elif channel == "stderr":
+            print(f"{title} · {subtitle}: {body}")
+        elif channel == "json":
+            pass
+        else:
+            raise HandoffError("channel must be macos, stderr or json")
+    try:
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        pass
+    result = {
+        "status": "notified" if actionable else "clean",
+        "channel": channel,
+        "checked": len(seen_paths),
+        "notified": actionable,
+        "suppressed": suppressed,
+        "skipped": skipped,
+        "fetch_errors": fetch_errors,
+        "state_file": str(state_path),
+        "fetch": do_fetch,
+        "notes": "Read-only Git checks; notifications only, never push/commit/fetch unless --fetch was supplied",
+    }
+    return result
 
 
 def write_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
@@ -242,6 +442,23 @@ def emit_markdown(result: dict[str, Any]) -> None:
 def add_sync_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--project", default=".")
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+
+
+def add_notify_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--project", action="append", default=[],
+                        help="Repository to check; may be repeated.")
+    parser.add_argument("--registry", help="JSON file with a list (or a 'projects' list) of repository paths.")
+    parser.add_argument("--channel", choices=("macos", "stderr", "json"), default="macos",
+                        help="Where to send actionable warnings (default: macos notification).")
+    parser.add_argument("--min-interval", type=float, default=60,
+                        help="Do not repeat the same state for this many minutes (default 60).")
+    parser.add_argument("--state", help="Deduplication state file (default: ~/.cache/skill-atlas/sync-notify.json).")
+    parser.add_argument("--fetch", action="store_true",
+                        help="Run git fetch before checking; off by default and never pushes.")
+    parser.add_argument("--fetch-timeout", type=float, default=10,
+                        help="Seconds allowed per repository fetch (default 10).")
+    parser.add_argument("--include-dirty", action="store_true",
+                        help="Also notify for uncommitted changes; off by default.")
 
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:
