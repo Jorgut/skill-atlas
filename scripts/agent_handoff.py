@@ -222,14 +222,59 @@ def _compact_notification(items: list[dict[str, Any]]) -> tuple[str, str, str]:
     return title, subtitle, body
 
 
-def _send_macos_notification(title: str, subtitle: str, body: str) -> None:
+def _send_macos_notification(title: str, subtitle: str, body: str, sound: str | None = "Glass") -> None:
     def quote(value: str) -> str:
         return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
-    script = f"display notification {quote(body)} with title {quote(title)} subtitle {quote(subtitle)}"
+    suffix = f" sound name {quote(sound)}" if sound else ""
+    script = f"display notification {quote(body)} with title {quote(title)} subtitle {quote(subtitle)}{suffix}"
     try:
         subprocess.run(["osascript", "-e", script], capture_output=True, timeout=15, check=False)
     except (OSError, subprocess.TimeoutExpired):
         return
+
+
+def _append_notification_log(log_path: Path, entries: list[dict[str, Any]], channel: str) -> None:
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps({
+                "at": datetime.now(timezone.utc).isoformat(),
+                "channel": channel,
+                "items": [
+                    {
+                        "path": item["path"],
+                        "branch": item["branch"],
+                        "warnings": item["warnings"],
+                    }
+                    for item in entries
+                ],
+            }, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
+def _recent_activity(root: Path) -> float | None:
+    """Latest mtime of a dirty path or the last commit, used for idle suppression."""
+    latest: float | None = None
+    try:
+        raw = git(root, "status", "--porcelain=v1", "-z", "--untracked-files=all")
+    except HandoffError:
+        raw = ""
+    for record in raw.split("\0"):
+        if not record:
+            continue
+        relative = record[3:]
+        if relative.startswith(f"{STATE_DIR}/"):
+            continue
+        try:
+            latest = max(latest or 0, (root / relative).lstat().st_mtime)
+        except OSError:
+            continue
+    try:
+        latest = max(latest or 0, float(git(root, "log", "-1", "--format=%ct")))
+    except (HandoffError, ValueError):
+        pass
+    return latest
 
 
 def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
@@ -238,14 +283,40 @@ def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
     registry = getattr(args, "registry", None)
     if registry:
         projects.extend(load_registry(Path(registry)))
-    if not projects:
-        raise HandoffError("Provide at least one --project or a --registry file")
     channel = getattr(args, "channel", "macos")
     min_interval = max(0.0, float(getattr(args, "min_interval", 60)))
     include_dirty = bool(getattr(args, "include_dirty", False))
     do_fetch = bool(getattr(args, "fetch", False))
+    idle_minutes = max(0.0, float(getattr(args, "idle_minutes", 0)))
+    sound = getattr(args, "sound", "Glass")
     state_path = Path(getattr(args, "state", None) or (Path.home() / ".cache" / "skill-atlas" / "sync-notify.json"))
+    log_path = Path(getattr(args, "log", None) or (Path.home() / ".cache" / "skill-atlas" / "sync-notify.log"))
     fetch_timeout = max(1.0, float(getattr(args, "fetch_timeout", 10)))
+    if getattr(args, "test_notification", False):
+        title, subtitle, body = "Skill Atlas test notification", "Notification delivery test", "If you see this, macOS notifications work."
+        if channel == "macos":
+            _send_macos_notification(title, subtitle, body, sound)
+        elif channel == "stderr":
+            print(f"{title} · {subtitle}: {body}")
+        elif channel != "json":
+            raise HandoffError("channel must be macos, stderr or json")
+        _append_notification_log(log_path, [{
+            "path": "test", "branch": "-", "warnings": ["test notification"]
+        }], channel)
+        return {
+            "status": "test-notification",
+            "channel": channel,
+            "notified": [],
+            "suppressed": [],
+            "skipped": [],
+            "fetch_errors": [],
+            "state_file": str(state_path),
+            "log_file": str(log_path),
+            "fetch": False,
+            "notes": "Test notification sent; no repository was checked",
+        }
+    if not projects:
+        raise HandoffError("Provide at least one --project or a --registry file")
     try:
         state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.is_file() else {}
     except (OSError, ValueError):
@@ -303,6 +374,11 @@ def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
                 "commit": status["commit"],
                 "warnings": warnings,
             }
+            if idle_minutes > 0:
+                last_activity = _recent_activity(path)
+                if last_activity is not None and (now - last_activity) < idle_minutes * 60:
+                    suppressed.append({**item, "reason": "recent activity"})
+                    continue
             key = "|".join(str(item[field]) for field in
                            ("path", "branch", "commit", "ahead", "behind", "has_upstream", "detached"))
             previous = state.get(key_path) or {}
@@ -318,13 +394,14 @@ def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
     if actionable:
         title, subtitle, body = _compact_notification(actionable)
         if channel == "macos":
-            _send_macos_notification(title, subtitle, body)
+            _send_macos_notification(title, subtitle, body, sound)
         elif channel == "stderr":
             print(f"{title} · {subtitle}: {body}")
         elif channel == "json":
             pass
         else:
             raise HandoffError("channel must be macos, stderr or json")
+        _append_notification_log(log_path, actionable, channel)
     try:
         state_path.parent.mkdir(parents=True, exist_ok=True)
         state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -339,6 +416,8 @@ def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
         "skipped": skipped,
         "fetch_errors": fetch_errors,
         "state_file": str(state_path),
+        "log_file": str(log_path),
+        "idle_minutes": idle_minutes,
         "fetch": do_fetch,
         "notes": "Read-only Git checks; notifications only, never push/commit/fetch unless --fetch was supplied",
     }
@@ -459,6 +538,13 @@ def add_notify_arguments(parser: argparse.ArgumentParser) -> None:
                         help="Seconds allowed per repository fetch (default 10).")
     parser.add_argument("--include-dirty", action="store_true",
                         help="Also notify for uncommitted changes; off by default.")
+    parser.add_argument("--idle-minutes", type=float, default=0,
+                        help="Suppress notifications while the worktree changed within this many minutes (default 0 = off).")
+    parser.add_argument("--sound", default="Glass",
+                        help="macOS notification sound name (default Glass); empty string disables the sound.")
+    parser.add_argument("--log", help="Append notification log (default: ~/.cache/skill-atlas/sync-notify.log).")
+    parser.add_argument("--test-notification", action="store_true",
+                        help="Send one test notification and exit; useful to verify delivery.")
 
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:

@@ -407,3 +407,7 @@ pre.term .term-caret {
   .links a:focus-visible { transform: none; }
   header.site nav a::after { transition: none; }
 }
+
+.mockup { margin: 22px 0 0; }
+.mockup img { display: block; width: 100%; height: auto; border-radius: 16px; box-shadow: 0 14px 40px rgba(8, 21, 34, .14); }
+.mockup figcaption { margin-top: 10px; color: var(--muted); font-size: 13px; line-height: 1.5; }

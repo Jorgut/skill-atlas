@@ -201,6 +201,7 @@ python3 <skill-root>/scripts/skill_atlas.py sync notify \
   --registry ~/.config/skill-atlas/projects.json --channel stderr
 python3 <skill-root>/scripts/skill_atlas.py sync notify \
   --project ~/repos/one --project ~/repos/two --channel json
+python3 <skill-root>/scripts/skill_atlas.py sync notify --test-notification
 ```
 
 Flags: repeated `--project PATH`; `--registry PATH` (JSON list or an object with a
@@ -208,18 +209,29 @@ Flags: repeated `--project PATH`; `--registry PATH` (JSON list or an object with
 MINUTES` (default 60); `--state PATH` (default
 `~/.cache/skill-atlas/sync-notify.json`); `--fetch` (off by default; only updates
 remote-tracking refs); `--fetch-timeout SECONDS` (default 10); `--include-dirty`
-(off by default). Actionable conditions are no upstream, unpushed commits,
-behind remote, and detached HEAD; dirty state is actionable only with
-`--include-dirty`. At least one target is required.
+(off by default); `--idle-minutes MINUTES` (default 0 = off; suppress while the
+worktree had file/commit activity within the window); `--sound NAME` (macOS
+notification sound, default `Glass`; empty string disables); `--log PATH` (append
+a JSON-lines delivery log; default `~/.cache/skill-atlas/sync-notify.log`);
+`--test-notification` (send one test notification and exit, no repositories
+checked). Actionable conditions are no upstream, unpushed commits, behind
+remote, and detached HEAD; dirty state is actionable only with
+`--include-dirty`. At least one target is required unless
+`--test-notification` is used.
 
 `--channel json` returns `{status, channel, checked, notified, suppressed,
-skipped, fetch_errors, state_file, fetch, notes}`. `status` is `notified` when at
-least one worktree was newly actionable, otherwise `clean` (including when all
-actionable states were suppressed). Each `notified`/`suppressed` entry has
-`project`, `path`, `branch`, `has_upstream`, `ahead`, `behind`, `dirty`,
-`detached`, `commit`, and `warnings`; `skipped` entries add `reason` and
-`fetch_errors` entries add `error`. See [Sync Notifications](sync-notify.md) for
-channels, deduplication, optional fetch, macOS caveats, and wiring examples.
+skipped, fetch_errors, state_file, log_file, idle_minutes, fetch, notes}`.
+`status` is `notified` when at least one worktree was newly actionable, otherwise
+`clean` (including when all actionable states were suppressed); a
+`--test-notification` run returns `status: "test-notification"` with empty lists,
+`state_file`, `log_file`, `fetch: false`, and no `checked`/`idle_minutes`. Each
+`notified`/`suppressed` entry has `project`, `path`, `branch`, `has_upstream`,
+`ahead`, `behind`, `dirty`, `detached`, `commit`, and `warnings`;
+idle-suppressed entries add `reason: "recent activity"`. `skipped` entries add
+`reason` and `fetch_errors` entries add `error`. See
+[Sync Notifications](sync-notify.md) for idle suppression, sound, the delivery
+log, test notification, deduplication, optional fetch, macOS caveats, and wiring
+examples.
 
 See [Installation and Development Layout](development-layout.md#push-before-you-hand-off-and-during-long-work)
 for recommended cadence, optional shell/scheduler/hook wiring, and the rule to never auto-push.

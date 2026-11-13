@@ -1,12 +1,14 @@
 # Sync Notifications
 
 `sync notify` is an optional, lightweight notification command added in
-`0.12.0-beta`. It checks one or more Git repositories (and their worktrees) and
-notifies you only when there is something that needs attention — an unpushed
-commit, a branch with no upstream, a remote-tracking branch that is ahead, or a
-detached HEAD. It is silent when everything is clean.
+`0.12.0-beta`; `0.12.1-beta` adds idle-aware suppression, a notification sound, a
+JSON-lines delivery log, and a test notification. It checks one or more Git
+repositories (and their worktrees) and notifies you only when there is something
+that needs attention — an unpushed commit, a branch with no upstream, a
+remote-tracking branch that is ahead, or a detached HEAD. It is silent when
+everything is clean.
 
-![Target macOS notification: Skill Atlas banner with repository, branch, and unpushed count](assets/sync-notification-mockup.png)
+![Target macOS notification: Skill Atlas banner with repository, branch, and unpushed count](assets/sync-notification-mockup.en.png)
 
 *UI target for the FlowCue Pro surface. The current lightweight `osascript` notification may show Script Editor as the app name and has no custom buttons.*
 
@@ -23,8 +25,10 @@ It **is**:
 - a one-shot, local check of explicitly listed projects and a registry file;
 - worktree-aware: each repository expands to its Git worktrees;
 - deduplicated through a local state file and a minimum interval;
+- idle-aware: `--idle-minutes` defers reminders until a worktree has been quiet;
 - quiet when clean, compact when not;
-- usable from macOS notifications, stderr, or JSON output.
+- usable from macOS notifications, stderr, or JSON output;
+- testable (`--test-notification`) and optionally logged (`--log`).
 
 It **is not**:
 
@@ -55,6 +59,15 @@ python3 <skill-root>/scripts/skill_atlas.py sync notify --project . --fetch --ch
 
 # Also include uncommitted changes as actionable.
 python3 <skill-root>/scripts/skill_atlas.py sync notify --project . --include-dirty --channel stderr
+
+# Stay quiet while actively editing; notify only after 15 idle minutes.
+python3 <skill-root>/scripts/skill_atlas.py sync notify --project . --idle-minutes 15 --channel stderr
+
+# Verify notification delivery once, then exit (no repositories checked).
+python3 <skill-root>/scripts/skill_atlas.py sync notify --test-notification
+
+# Append delivered notifications to a JSON-lines log.
+python3 <skill-root>/scripts/skill_atlas.py sync notify --project . --log ~/.cache/skill-atlas/sync-notify.log
 ```
 
 | Flag | Meaning |
@@ -67,6 +80,10 @@ python3 <skill-root>/scripts/skill_atlas.py sync notify --project . --include-di
 | `--fetch` | Run `git fetch --quiet --prune` before checking. Off by default; never pushes. |
 | `--fetch-timeout SECONDS` | Time limit per repository fetch (default 10). |
 | `--include-dirty` | Treat uncommitted changes as actionable too. Off by default. |
+| `--idle-minutes MINUTES` | Suppress notifications while the worktree had file or commit activity within this window (default 0 = off). |
+| `--sound NAME` | macOS notification sound name (default `Glass`); pass an empty string to disable the sound. |
+| `--log PATH` | Append a JSON-lines notification log (default `~/.cache/skill-atlas/sync-notify.log`). |
+| `--test-notification` | Send one test notification and exit; no repositories are checked. |
 
 At least one `--project` or a `--registry` file is required; otherwise the command
 is refused with exit status 2. Non-Git paths and unreadable worktrees are
@@ -122,15 +139,41 @@ Warnings are summarized, not blocking: a notification says *what* looks
 actionable, and you decide whether to push, commit, branch, or ignore it. Nothing
 is changed and no remote is contacted unless you add `--fetch`.
 
+## Idle-aware suppression
+
+`--idle-minutes N` (default 0, off) is for "do not interrupt active iteration".
+For each actionable worktree, the command looks at the latest modification time
+of its dirty or untracked files (`.agent-state/` excluded) and its last commit
+time. If that activity is within N minutes, the worktree is added to `suppressed`
+with `reason: "recent activity"` and no notification is sent.
+
+- A commit counts as activity: an unpushed commit is not announced until the
+  worktree has been quiet for the idle window.
+- Idle suppression does not advance the dedupe state, so the reminder can still
+  be delivered once the worktree goes idle (subject to `--min-interval`).
+- The recommended launchd setup checks every 15 minutes with
+  `--min-interval 60 --idle-minutes 15`: while you edit it stays silent, and
+  after 15 minutes without changes at most one notification is sent for that
+  state.
+- This is a local file-mtime/commit-time heuristic, not detection of user
+  presence or activity in other applications.
+
+## Sound
+
+`--sound NAME` sets the macOS notification sound (default `Glass`); an empty
+string (`--sound ""`) disables it. The sound is only used by the `macos`
+channel; `stderr` and `json` ignore it. macOS may ignore unknown sound names.
+
 ## Channels
 
 - **`macos`** (default) — sends a notification with
-  `osascript -e 'display notification ...'`. The macOS notification system may
-  display **Script Editor** as the app name because `osascript` is the sending
-  process, and there are no custom buttons or click actions. Branded or clickable
-  notifications would require a signed helper application or a Pro/helper-app
-  path, which is not part of this release. Delivery also depends on the user's
-  Notification Center and Focus settings.
+  `osascript -e 'display notification ...'`, optionally with `--sound` (default
+  `Glass`). The macOS notification system may display **Script Editor** as the
+  app name because `osascript` is the sending process, and there are no custom
+  buttons or click actions. Branded or clickable notifications would require a
+  signed helper application or a Pro/helper-app path, which is not part of this
+  release. Delivery also depends on the user's Notification Center and Focus
+  settings.
 - **`stderr`** — prints one compact line such as
   `Skill Atlas · 1 project needs a push: project · master: 1 unpushed`.
   This is the easiest channel for hooks and logs; it stays silent when clean.
@@ -159,7 +202,27 @@ of `notified`; `macos` and `stderr` stay silent, and `json` reports
   suppressed until the interval elapses; use `--min-interval 0` if you genuinely
   want every dirty check reported.
 
-State is local; nothing is uploaded and no remote service is used to deduplicate.
+Idle-suppressed worktrees appear in `suppressed` with
+`reason: "recent activity"` and do not advance the dedupe state; interval/state
+suppression entries have no reason. State is local; nothing is uploaded and no
+remote service is used to deduplicate.
+
+## Notification log
+
+Delivered notifications append one JSON line to `--log PATH` (default
+`~/.cache/skill-atlas/sync-notify.log`). Each line contains `at`, `channel`, and
+`items: [{path, branch, warnings}]`. Only delivered notifications (and the test
+notification) are logged; clean or suppressed runs write nothing. The log write
+is best-effort: an unwritable path does not fail the command. The log contains
+local paths and branch names, so treat it as local project data.
+
+## Testing delivery
+
+`--test-notification` sends one test notification and exits without checking any
+repository. With the default `macos` channel it exercises the same notification
+path as a real reminder; `--channel stderr` prints the test line instead, and
+`--channel json` prints the test result object. The test does not update the
+dedupe state, but it does append a log entry (with `path: "test"`).
 
 ## Optional fetch
 
@@ -198,10 +261,12 @@ a report.
 | `channel` | `macos`, `stderr`, or `json` |
 | `checked` | Number of unique worktree paths examined |
 | `notified` | Actionable worktrees that were reported this run |
-| `suppressed` | Actionable worktrees suppressed by the interval/state dedupe |
+| `suppressed` | Actionable worktrees suppressed by the interval/state dedupe or by idle-aware suppression; idle entries carry `reason: "recent activity"` |
 | `skipped` | Projects/worktrees that could not be checked, with a `reason` |
 | `fetch_errors` | Repositories whose optional fetch failed, with an `error` |
 | `state_file` | Deduplication state file path |
+| `log_file` | Delivery log path (whether or not it was written) |
+| `idle_minutes` | Idle window used for suppression (`0` means off) |
 | `fetch` | Whether `--fetch` was requested |
 | `notes` | A reminder that checks are read-only and nothing is pushed |
 
@@ -209,6 +274,12 @@ Each entry in `notified` and `suppressed` has `project` (repository root), `path
 (worktree path), `branch`, `has_upstream`, `ahead`, `behind`, `dirty`,
 `detached`, `commit`, and `warnings`. `skipped` entries have `project` and
 `reason`; `fetch_errors` entries have `project` and `error`.
+
+`--test-notification --channel json` prints a test result instead:
+`status: "test-notification"`, `channel`, empty `notified`/`suppressed`/
+`skipped`/`fetch_errors`, `state_file`, `log_file`, `fetch: false`, and `notes`.
+It does not include `checked` or `idle_minutes` because no repositories were
+checked.
 
 ## Optional wiring
 
@@ -271,10 +342,13 @@ The wrapper does not need to parse the event payload. Register the wrapper with
 the current Codex `notify` setting; validate the configuration format for your
 Codex version.
 
-### launchd (macOS), every 60 minutes
+### launchd (macOS), every 15 minutes
 
 A user LaunchAgent can run an explicit project list or registry periodically.
-Save as `~/Library/LaunchAgents/local.skill-atlas.sync-notify.plist`:
+This example checks every 15 minutes with `--min-interval 60 --idle-minutes 15`,
+so it stays silent while you are editing and sends a reminder only after 15
+minutes of inactivity. Save as
+`~/Library/LaunchAgents/local.skill-atlas.sync-notify.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -295,9 +369,13 @@ Save as `~/Library/LaunchAgents/local.skill-atlas.sync-notify.plist`:
     <string>/Users/you/.config/skill-atlas/projects.json</string>
     <string>--channel</string>
     <string>macos</string>
+    <string>--min-interval</string>
+    <string>60</string>
+    <string>--idle-minutes</string>
+    <string>15</string>
   </array>
   <key>StartInterval</key>
-  <integer>3600</integer>
+  <integer>900</integer>
   <key>RunAtLoad</key>
   <false/>
 </dict>
@@ -309,7 +387,10 @@ Then load it with
 (after checking the Python path and registry path for your machine). launchd runs
 with a limited environment and can differ from your shell; verify that the job
 actually runs. This is a scheduler, not a Skill Atlas daemon — it invokes one
-check per interval and then exits.
+check per interval and then exits. Reduce `StartInterval` only if you want
+finer-grained idle detection; `--idle-minutes` controls how long the worktree
+must be quiet, and `--min-interval 60` prevents repeated reminders for the same
+state.
 
 ### Token and cost notes
 
@@ -321,6 +402,28 @@ check per interval and then exits.
   inexpensive.
 - JSON output is for scripts and is not meant to be fed into a model conversation
   repeatedly.
+
+## Troubleshooting: no notification
+
+1. **Verify delivery first.** Run
+   `python3 <skill-root>/scripts/skill_atlas.py sync notify --test-notification`.
+   If no banner appears, check macOS notification permission for **Script
+   Editor** (the `osascript` sender) under System Settings → Notifications, then
+   check the alert style (banners auto-dismiss; alerts stay) and Focus/Do Not
+   Disturb. An app name or permission entry may differ by macOS version.
+2. **Check the channel.** `--channel stderr` or `--channel json` proves the check
+   ran even when the OS blocks notifications.
+3. **Check suppression.** `--idle-minutes` defers while files or commits are
+   recent; `--min-interval`/the state file suppress identical state. For a clean
+   test, use `--min-interval 0` and a temporary `--state`/`--log` path, and inspect
+   `suppressed` (including any `recent activity` reason).
+4. **Check that there is actionable state.** A clean, pushed worktree stays
+   silent. Uncommitted changes count only with `--include-dirty`; `behind` may be
+   stale without `--fetch`.
+5. **Check the log.** `--log` records delivered notifications; a missing entry
+   means the notification was suppressed or the check found nothing actionable.
+6. **Scheduled environments differ.** launchd/cron run with a limited `PATH` and
+   notification context; verify the job manually and use absolute paths.
 
 ## Relationship to `sync status` and checkpoints
 
@@ -344,7 +447,13 @@ for the wider handoff convention.
   still exits successfully.
 - **macOS shows `Script Editor` as the app.** `osascript` is the sending process,
   so the notification may not be branded and cannot have custom buttons. A
-  branded, clickable helper is future work, not part of `0.12.0-beta`.
+  branded, clickable helper is future work, not part of `0.12.1-beta`.
+- **Idle suppression is a heuristic.** It uses local file mtimes and the last
+  commit time, not actual user presence; files changed by another process can
+  keep a reminder deferred. A commit itself counts as activity.
+- **Sound and log are best-effort.** macOS may ignore the requested sound, and an
+  unwritable log path is skipped silently. A test notification proves the local
+  send path ran, not that the OS displayed a visible banner.
 - **Platform-specific wiring is not bundled.** Hooks, launchd, cron, and shell
   aliases vary by client, OS version, and permissions; validate the exact
   configuration before relying on it.
@@ -365,6 +474,7 @@ Everything is local. The command reads local Git metadata only (no file contents
 credentials, or session text), and opens no network connection unless `--fetch`
 is supplied. The state file stores only worktree paths and deduplication keys
 (branch, commit, ahead/behind, upstream presence, detached state) plus a
-timestamp. Notification titles and bodies contain worktree names, branch names,
-and warning counts; treat screenshots or logs of them as you would any local
-project path.
+timestamp. The optional delivery log appends local paths, branch names, and
+warning summaries. Notification titles and bodies contain worktree names, branch
+names, and warning counts; treat screenshots, notifications, and logs as you
+would any local project path.
