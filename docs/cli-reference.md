@@ -2,6 +2,24 @@
 
 The unified command tree is documented in [SKILL.md](../SKILL.md). Use these lower-level helpers for automation, custom output formats, or debugging. They preserve the same permission and review requirements.
 
+## First-run tour
+
+`start` prints the explicit first-run tour: a title, the invoked copy's version,
+a summary, five safe quickstart commands, links to the workflow guides, the
+safety rules, and a suggested order. It is a static, one-shot command; it does
+not scan the machine, open a network connection, or change anything.
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py start
+python3 <skill-root>/scripts/skill_atlas.py start --format json
+```
+
+JSON returns `{version, title, summary, quickstart, workflows, safety,
+next_steps}`, where `quickstart` is `[{command, purpose}]` and `workflows` is
+`[{name, doc}]` with absolute GitHub documentation URLs. The version comes from
+the invoked copy's `skill.json`. See [First-Run Tour](start.md) for the full
+walkthrough and limitations.
+
 For executed public discovery use the unified CLI, not the offline component helpers:
 
 ```bash

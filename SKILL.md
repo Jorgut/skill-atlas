@@ -23,7 +23,16 @@ Choose the workflow from the request:
 - duplicated project copies, divergent `AGENTS.md`/`CLAUDE.md`/state docs, or nested project roots: run `projects audit` (read-only)
 - large agent homes, caches, sessions, plugins, project media, build artifacts, Git objects, or disk pressure: run `disk scan` (read-only)
 - handing a compact review or action request to a local agent: read Agent Handoff Messages below
+- just installed, asking how to begin, or needing orientation: run `start` and follow its suggested order; do not auto-run scans
 - a downloaded or proposed third-party skill: run strict security review
+
+## First Run
+
+When the user has just installed Skill Atlas or asks how to start, run
+`python3 scripts/skill_atlas.py start` and follow its suggested order. The tour is
+explicit: skills cannot pop up UI, `start` itself makes no scans or changes, and
+it is safe to run before anything else. Do not auto-run scans or installers on
+first contact; let the user choose from the tour.
 
 ## Executed Public Search
 
@@ -127,6 +136,7 @@ Treat this command tree as stable across Agent platforms:
 
 ```text
 skill-atlas
+├── start            explicit first-run tour with safest commands and docs links
 ├── install          preview or explicitly apply cross-platform installation
 ├── manage
 │   ├── scan       inventory configured skill roots
@@ -181,7 +191,7 @@ skill-atlas
     └── approve    record a person's approval before completion
 ```
 
-Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. The `message` actions write only under `.agent-state/messages/`; they do not contact another agent or modify project files. `message approve` records a person's local approval and must not be run on another person's behalf. `agents scan` reads filesystem metadata and local Skill Atlas manifests only; it never executes an agent tool and writes nothing. `disk scan` reads file metadata only; it never reads file contents, follows symlinks while walking, or deletes, moves, compresses, or archives anything. `projects audit` reads metadata, small `.git` files, and documentation hashes only; it never runs git and writes nothing. `sync status` reads local Git metadata only; it never fetches, pushes, commits, or rebases. `sync notify` reads local Git metadata and notifies; it never pushes, commits, or merges, and never fetches unless `--fetch` is supplied. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
+Commands are read-only by default. `install` previews its exact copy and link operations unless the user supplies both `--apply` and `--confirm`. `manage update`, `manage sync`, and `orchestrate run` always produce plans only. `manage self update` and `manage self rollback` may modify the Skill Atlas installation only when the user supplies both `--apply` and `--confirm` after reviewing the exact source or backup. The `message` actions write only under `.agent-state/messages/`; they do not contact another agent or modify project files. `message approve` records a person's local approval and must not be run on another person's behalf. `agents scan` reads filesystem metadata and local Skill Atlas manifests only; it never executes an agent tool and writes nothing. `disk scan` reads file metadata only; it never reads file contents, follows symlinks while walking, or deletes, moves, compresses, or archives anything. `projects audit` reads metadata, small `.git` files, and documentation hashes only; it never runs git and writes nothing. `sync status` reads local Git metadata only; it never fetches, pushes, commits, or rebases. `start` prints a static first-run tour (version and links) only; it runs no scan and writes nothing. `sync notify` reads local Git metadata and notifies; it never pushes, commits, or merges, and never fetches unless `--fetch` is supplied. Never install, overwrite, delete, symlink, update, or execute external actions without that explicit confirmation.
 
 Agent command syntax varies. If a platform does not pass arguments after `$skill-atlas` or does not support dollar-prefixed skill calls, accept equivalent natural language such as "Use Skill Atlas manage" or "用 Skill Atlas 编排这个任务". Preserve these command meanings across platforms.
 

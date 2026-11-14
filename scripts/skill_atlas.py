@@ -18,6 +18,7 @@ import agent_handoff
 import agent_messages
 import disk_scan
 import sync_setup
+import start_guide
 import handoff_advisor
 import project_roots
 import feedback_loop
@@ -639,6 +640,22 @@ def normalize_legacy_args(argv: list[str]) -> list[str]:
     return [command, defaults[command], *argv[1:]]
 
 
+def handle_start(args: argparse.Namespace) -> None:
+    result = start_guide.guide()
+    if args.format == "json":
+        json_print(result)
+    else:
+        start_guide.emit_markdown(result)
+
+
+def add_start_command(subparsers: argparse._SubParsersAction) -> None:
+    start = subparsers.add_parser(
+        "start", help="Show the first-run tour and safest quickstart commands."
+    )
+    start_guide.add_arguments(start)
+    start.set_defaults(handler=handle_start)
+
+
 def add_manage_commands(subparsers: argparse._SubParsersAction) -> None:
     manage = subparsers.add_parser("manage", help="Inventory, update-plan, deduplicate, and sync skills.")
     actions = manage.add_subparsers(dest="action", required=True)
@@ -1094,6 +1111,7 @@ def add_feedback_commands(subparsers: argparse._SubParsersAction) -> None:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Manage, discover, recommend, orchestrate, refresh markets, and monitor agent skills.")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    add_start_command(subparsers)
     add_manage_commands(subparsers)
     add_install_command(subparsers)
     add_discover_commands(subparsers)
