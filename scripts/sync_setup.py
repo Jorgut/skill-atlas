@@ -72,7 +72,7 @@ def _registry_document(path: Path, projects: list[str]) -> dict[str, Any]:
 
 def _plist_document(
     python: Path, script: Path, registry: Path, log: Path,
-    *, interval_minutes: int, idle_minutes: int, min_interval: int,
+    *, interval_minutes: int, idle_minutes: int, min_interval: int, force_after_minutes: int,
 ) -> dict[str, Any]:
     return {
         "Label": LABEL,
@@ -89,6 +89,8 @@ def _plist_document(
             str(min_interval),
             "--idle-minutes",
             str(idle_minutes),
+            "--force-after-minutes",
+            str(force_after_minutes),
         ],
         "StartInterval": max(60, interval_minutes * 60),
         "RunAtLoad": False,
@@ -124,6 +126,7 @@ def setup(args: argparse.Namespace) -> dict[str, Any]:
     interval = max(1, int(getattr(args, "interval", 15)))
     idle = max(0, int(getattr(args, "idle_minutes", 30)))
     min_interval = max(0, int(getattr(args, "min_interval", 60)))
+    force_after = max(0, int(getattr(args, "force_after_minutes", 240)))
     confirm = bool(getattr(args, "confirm", False))
     run_test = not bool(getattr(args, "no_test", False))
     registry = _registry_document(paths["registry"], projects)
@@ -132,6 +135,7 @@ def setup(args: argparse.Namespace) -> dict[str, Any]:
     plan = _plist_document(
         python, script, paths["registry"], paths["log"],
         interval_minutes=interval, idle_minutes=idle, min_interval=min_interval,
+        force_after_minutes=force_after,
     )
     if not confirm:
         return {
@@ -142,6 +146,7 @@ def setup(args: argparse.Namespace) -> dict[str, Any]:
             "interval_minutes": interval,
             "idle_minutes": idle,
             "min_interval": min_interval,
+            "force_after_minutes": force_after,
             "plist_document": plan,
             "notes": ["Preview only. Re-run with --confirm to write the registry, install the LaunchAgent and run a test notification."],
         }
@@ -181,6 +186,7 @@ def setup(args: argparse.Namespace) -> dict[str, Any]:
         "interval_minutes": interval,
         "idle_minutes": idle,
         "min_interval": min_interval,
+        "force_after_minutes": force_after,
         "backups": backups,
         "launchctl_loaded": loaded,
         "launchctl_output": bootstrap_output or output,
@@ -198,6 +204,7 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--interval", type=int, default=15, help="Check interval in minutes (default 15).")
     parser.add_argument("--idle-minutes", type=int, default=30, help="Suppress while recently active (default 30).")
     parser.add_argument("--min-interval", type=int, default=60, help="Minimum repeat interval for the same state (default 60).")
+    parser.add_argument("--force-after-minutes", type=int, default=240, help="Send a digest after the same state persists this long while active (default 240).")
     parser.add_argument("--confirm", action="store_true", help="Write files, install the LaunchAgent and test.")
     parser.add_argument("--no-test", action="store_true", help="Skip the test notification.")
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
@@ -209,7 +216,7 @@ def emit_markdown(result: dict[str, Any]) -> None:
     print(f"- registry: `{result['registry']}`")
     print(f"- launch agent: `{result['plist']}`")
     print(f"- projects: {', '.join(result['projects'])}")
-    print(f"- checks every {result['interval_minutes']} min; idle {result['idle_minutes']} min; repeat >= {result['min_interval']} min")
+    print(f"- checks every {result['interval_minutes']} min; idle {result['idle_minutes']} min; repeat >= {result['min_interval']} min; digest after {result['force_after_minutes']} min")
     if result.get("backups"):
         print(f"- backups: {', '.join(result['backups'])}")
     if "launchctl_loaded" in result:

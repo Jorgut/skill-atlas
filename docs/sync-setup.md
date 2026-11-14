@@ -1,10 +1,11 @@
 # Sync Notification Setup
 
 `sync setup` is a one-command installer for the optional macOS sync notification
-job, added in `0.13.0-beta`. It exists so a Skill Atlas-only user can get
-push reminders without installing FlowCue or another helper app: the command
-writes a small registry of repositories and installs a launchd user agent that
-periodically runs `sync notify`.
+job, added in `0.13.0-beta`; `0.13.1-beta` adds a digest backstop for long-lived
+active work. It exists so a Skill Atlas-only user can get push reminders without
+installing FlowCue or another helper app: the command writes a small registry of
+repositories and installs a launchd user agent that periodically runs
+`sync notify`.
 
 It is deliberately explicit. Without `--confirm` it only previews what it would
 write. With `--confirm` it merges the registry, writes the LaunchAgent (backing
@@ -58,9 +59,10 @@ Useful variants:
 # Skip the test notification after installing.
 python3 <skill-root>/scripts/skill_atlas.py sync setup --confirm --no-test
 
-# Check every 30 minutes, suppress while active for 30 minutes, repeat at most hourly.
+# Check every 30 minutes, suppress while active for 30 minutes, repeat at most hourly,
+# and digest a long-lived active state after 4 hours.
 python3 <skill-root>/scripts/skill_atlas.py sync setup --confirm \
-  --interval 30 --idle-minutes 30 --min-interval 60 --format json
+  --interval 30 --idle-minutes 30 --min-interval 60 --force-after-minutes 240 --format json
 ```
 
 | Flag | Meaning |
@@ -69,6 +71,7 @@ python3 <skill-root>/scripts/skill_atlas.py sync setup --confirm \
 | `--interval MINUTES` | LaunchAgent check interval in minutes (default 15). The plist uses a minimum `StartInterval` of 60 seconds. |
 | `--idle-minutes MINUTES` | Suppress notifications while files or commits changed within this window (default 30). |
 | `--min-interval MINUTES` | Minimum repeat interval for the same worktree state (default 60). |
+| `--force-after-minutes MINUTES` | Send a digest after the same state persists this long while active (default 240; `0` disables). |
 | `--confirm` | Write files, install the LaunchAgent, and run a test notification. |
 | `--no-test` | Skip the post-install test notification. |
 | `--format markdown\|json` | Preview/result format (default `markdown`). |
@@ -88,7 +91,7 @@ JSON preview also includes the exact `plist_document` that would be written:
 - registry: `~/.config/skill-atlas/watch.json`
 - launch agent: `~/Library/LaunchAgents/com.skill-atlas.sync-notify.plist`
 - projects: /Users/you/repos/one
-- checks every 15 min; idle 30 min; repeat >= 60 min
+- checks every 15 min; idle 30 min; repeat >= 60 min; digest after 240 min
 - note: Preview only. Re-run with --confirm to write the registry, install the LaunchAgent and run a test notification.
 ```
 
@@ -110,7 +113,8 @@ matches what `--confirm` would merge.
    `~/Library/LaunchAgents/com.skill-atlas.sync-notify.plist` with label
    `com.skill-atlas.sync-notify`. Its arguments run
    `skill_atlas.py sync notify --registry <watch.json> --channel macos
-   --min-interval N --idle-minutes N`; `StartInterval` is
+   --min-interval N --idle-minutes N --force-after-minutes N`;
+   `StartInterval` is
    `max(60, interval_minutes × 60)`, `RunAtLoad` is false, and
    `LimitLoadToSessionType` is `Aqua`.
 4. Runs `launchctl bootout gui/<uid> <plist>` (best effort) and then
@@ -138,7 +142,7 @@ Preview JSON:
 | `status` | `preview` |
 | `registry`, `plist` | Paths that would be written |
 | `projects` | Merged project path list |
-| `interval_minutes`, `idle_minutes`, `min_interval` | Cadence values |
+| `interval_minutes`, `idle_minutes`, `min_interval`, `force_after_minutes` | Cadence values |
 | `plist_document` | The exact LaunchAgent dictionary |
 | `notes` | Preview-only reminder |
 
@@ -235,6 +239,6 @@ longer need them. Uninstalling never touches the watched Git repositories.
   launchctl ran, not that you saw a notification.
 - **No automatic uninstall or rollback.** Use the uninstall steps above; existing
   files are backed up, not deleted.
-- **Defaults differ from `sync notify`.** Setup uses a 30-minute idle window by
-  default, while `sync notify` uses 0 (off) when run directly; setup writes the
-  values into the plist.
+- **Defaults differ from `sync notify`.** Setup uses a 30-minute idle window and
+  a 240-minute digest backstop by default, while `sync notify` uses 0 (off) for
+  both when run directly; setup writes the values into the plist.

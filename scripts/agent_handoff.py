@@ -288,6 +288,7 @@ def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
     include_dirty = bool(getattr(args, "include_dirty", False))
     do_fetch = bool(getattr(args, "fetch", False))
     idle_minutes = max(0.0, float(getattr(args, "idle_minutes", 0)))
+    force_after_minutes = max(0.0, float(getattr(args, "force_after_minutes", 0)))
     sound = getattr(args, "sound", "Glass")
     state_path = Path(getattr(args, "state", None) or (Path.home() / ".cache" / "skill-atlas" / "sync-notify.json"))
     log_path = Path(getattr(args, "log", None) or (Path.home() / ".cache" / "skill-atlas" / "sync-notify.log"))
@@ -361,6 +362,7 @@ def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
             if include_dirty and status["dirty"]:
                 warnings.append(f"{status['dirty']} uncommitted change(s)")
             if not warnings:
+                state.pop(key_path, None)
                 continue
             item = {
                 "project": str(root),
@@ -374,23 +376,33 @@ def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
                 "commit": status["commit"],
                 "warnings": warnings,
             }
-            if idle_minutes > 0:
-                last_activity = _recent_activity(path)
-                if last_activity is not None and (now - last_activity) < idle_minutes * 60:
-                    suppressed.append({**item, "reason": "recent activity"})
-                    continue
             key = "|".join(str(item[field]) for field in
                            ("path", "branch", "commit", "ahead", "behind", "has_upstream", "detached"))
             previous = state.get(key_path) or {}
-            fresh_enough = (
-                previous.get("key") == key
-                and (now - float(previous.get("notified_at", 0))) < min_interval * 60
+            same_key = previous.get("key") == key
+            first_seen = float(previous.get("first_seen_at", now)) if same_key else now
+            notified_at = float(previous.get("notified_at", 0))
+            interval_ok = (not same_key) or (now - notified_at) >= min_interval * 60
+            recent_activity = False
+            if idle_minutes > 0:
+                last_activity = _recent_activity(path)
+                recent_activity = last_activity is not None and (now - last_activity) < idle_minutes * 60
+            force_due = (
+                force_after_minutes > 0
+                and same_key
+                and (now - first_seen) >= force_after_minutes * 60
+                and interval_ok
             )
-            if fresh_enough:
+            if recent_activity and not force_due:
+                suppressed.append({**item, "reason": "recent activity"})
+                state[key_path] = {"key": key, "first_seen_at": first_seen, "notified_at": notified_at}
+                continue
+            if not interval_ok and not force_due:
                 suppressed.append(item)
-            else:
-                actionable.append(item)
-                state[key_path] = {"key": key, "notified_at": now}
+                state[key_path] = {"key": key, "first_seen_at": first_seen, "notified_at": notified_at}
+                continue
+            actionable.append(item)
+            state[key_path] = {"key": key, "first_seen_at": now, "notified_at": now}
     if actionable:
         title, subtitle, body = _compact_notification(actionable)
         if channel == "macos":
@@ -418,6 +430,7 @@ def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
         "state_file": str(state_path),
         "log_file": str(log_path),
         "idle_minutes": idle_minutes,
+        "force_after_minutes": force_after_minutes,
         "fetch": do_fetch,
         "notes": "Read-only Git checks; notifications only, never push/commit/fetch unless --fetch was supplied",
     }
@@ -540,6 +553,8 @@ def add_notify_arguments(parser: argparse.ArgumentParser) -> None:
                         help="Also notify for uncommitted changes; off by default.")
     parser.add_argument("--idle-minutes", type=float, default=0,
                         help="Suppress notifications while the worktree changed within this many minutes (default 0 = off).")
+    parser.add_argument("--force-after-minutes", type=float, default=0,
+                        help="Send a periodic digest even while active once the same state has persisted this long (default 0 = off).")
     parser.add_argument("--sound", default="Glass",
                         help="macOS notification sound name (default Glass); empty string disables the sound.")
     parser.add_argument("--log", help="Append notification log (default: ~/.cache/skill-atlas/sync-notify.log).")
