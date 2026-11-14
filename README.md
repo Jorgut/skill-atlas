@@ -11,7 +11,7 @@ Website: [jorgut.github.io/skill-atlas](https://jorgut.github.io/skill-atlas/)
 ![License](https://img.shields.io/github/license/Jorgut/skill-atlas?style=flat-square)
 ![Agent Skill](https://img.shields.io/badge/Agent%20Skill-Skill%20Manager-111111?style=flat-square)
 
-Your machine has coding agents. Skill Atlas tells you which ones exist, where they load rules and skills from, whether your Skill Atlas copies disagree, and where project copies have drifted — read-only by default.
+Your machine has coding agents. Skill Atlas tells you which ones exist, where they load rules and skills from, whether your Skill Atlas copies disagree, where project copies have drifted, what agent work uses on disk, and which commits are still local — read-only by default, with an explicit `start` tour on first use.
 
 It is a local-aware, cross-platform manager for agent skills. It inventories installed skills, detects duplicates and symlinks, plans updates and consolidation, discovers alternatives and competitors, recommends skill stacks for products and professional workflows, validates multi-skill orchestration, guides shared project context and handoff across agent tools, reports read-only local evidence about installed coding-agent tools and project copies, and can relay compact cross-agent handoff messages through local files.
 

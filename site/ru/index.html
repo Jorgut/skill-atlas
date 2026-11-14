@@ -43,7 +43,7 @@
         <p class="lede">
           Skill Atlas показывает, какие агенты для программирования есть на вашей машине,
           откуда каждый из них загружает правила и навыки, совпадают ли ваши локальные копии Skill Atlas
-          и где один и тот же проект существует более чем в одном месте с разошедшимися документами. Он также показывает, сколько места занимает работа агентов, и напоминает о коммитах, которые есть только локально, перед передачей задачи.
+          и где один и тот же проект существует более чем в одном месте с разошедшимися документами. Он также показывает, сколько места занимает работа агентов, и может установить напоминания о push; для первого запуска выполните <code>start</code>.
           Это навык для Codex, Claude Code, DeepSeek Harness, OpenCode, WorkBuddy, Kimi Code
           и других инструментов агентов.
         </p>
@@ -55,8 +55,8 @@
       </section>
 
       <section id="whats-new" aria-labelledby="whats-new-title">
-        <h2 id="whats-new-title">Новое в 0.12</h2>
-        <p class="section-note">Три добавления для той части работы агентов, которая начинается после написания кода.</p>
+        <h2 id="whats-new-title">Новое в 0.14</h2>
+        <p class="section-note">Онбординг, напоминания одной командой и дайджест для долгих сессий.</p>
         <div class="grid three">
           <div class="card">
             <h3>Аудит диска</h3>
@@ -69,6 +69,18 @@
           <div class="card">
             <h3>Лёгкие уведомления</h3>
             <p><code>sync notify</code> следит за выбранными репозиториями и их worktree и присылает уведомление macOS только когда push действительно нужен. Молчит, когда всё чисто; никогда не делает push автоматически.</p>
+          </div>
+          <div class="card">
+            <h3>Первый запуск</h3>
+            <p><code>start</code> показывает пять безопасных команд, ссылки на руководства, правила безопасности и порядок. Навык не может сам открыть интерфейс, поэтому тур явный и статичный.</p>
+          </div>
+          <div class="card">
+            <h3>Напоминания одной командой</h3>
+            <p><code>sync setup --confirm</code> создаёт registry и LaunchAgent macOS, делает резервные копии, загружает job и отправляет тестовое уведомление. Сначала лучше preview.</p>
+          </div>
+          <div class="card">
+            <h3>Дайджест раз в 4 часа</h3>
+            <p><code>--force-after-minutes 240</code> присылает дайджест, если то же состояние не отправлено, даже пока вы редактируете. Автопуша нет; часовой минимум сохраняется.</p>
           </div>
         </div>
         <figure class="mockup">
@@ -204,6 +216,7 @@
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md"><strong>Сообщения о передаче между агентами</strong><span>Конверты, квитанция, одобрение</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/disk-scan.md"><strong>Аудит диска</strong><span>Место, риск, опциональная очистка</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/sync-notify.md"><strong>Уведомления о синхронизации</strong><span>Неотправленные коммиты, опциональные хуки</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/start.md"><strong>Первый запуск</strong><span>Пять безопасных команд и порядок</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/cli-reference.md"><strong>Справочник CLI</strong><span>Каждая команда и флаг</span></a>
         </div>
       </section>
@@ -212,7 +225,7 @@
 
   <footer>
     <div class="wrap">
-      <span>Skill Atlas · 0.12.1-beta · приоритет локальной работы, только для чтения по умолчанию.</span>
+      <span>Skill Atlas · 0.14.0-beta · приоритет локальной работы, только для чтения по умолчанию.</span>
       <span><a href="https://github.com/Jorgut/skill-atlas">GitHub</a> · <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/GETTING_STARTED.ru.md">Руководство для начинающих</a> · без трекеров и cookie</span>
     </div>
   </footer>
