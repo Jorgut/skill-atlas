@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import time
 from contextlib import redirect_stdout
 from io import StringIO
 from unittest.mock import patch
@@ -254,6 +255,25 @@ class HandoffTests(unittest.TestCase):
                 project=[str(self.project)], idle_minutes=15,
                 log=str(self.project / "notify2.log")))
         self.assertEqual(result["status"], "notified")
+
+    def test_sync_notify_forced_digest_while_active(self):
+        status = agent_handoff.sync_status(Path(self.project))
+        key = "|".join(str(status[field]) for field in
+                       ("branch", "commit", "ahead", "behind", "has_upstream", "detached"))
+        key = f"{Path(self.project).resolve()}|{key}"
+        state = self.project / "digest-state.json"
+        now = time.time()
+        state.write_text(json.dumps({str(Path(self.project).resolve()): {
+            "key": key, "first_seen_at": now - 300 * 60, "notified_at": now - 3600,
+        }}))
+        args = self.notify_options(project=[str(self.project)], idle_minutes=30,
+                                   force_after_minutes=240, state=str(state),
+                                   log=str(self.project / "digest.log"))
+        with patch.object(agent_handoff, "_recent_activity", return_value=now):
+            result = agent_handoff.sync_notify(args)
+        self.assertEqual(result["status"], "notified")
+        saved = json.loads(state.read_text())[str(Path(self.project).resolve())]
+        self.assertGreater(saved["first_seen_at"], now - 60)
 
     def test_sync_notify_writes_log(self):
         log = self.project / "notify.log"

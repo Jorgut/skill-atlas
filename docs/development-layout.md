@@ -227,8 +227,10 @@ Claude Code/Codex hook, or launchd/cron job. On macOS, the one-command path is
 `sync setup`: it previews by default and, with `--confirm`, writes the watch
 registry and LaunchAgent, backs up existing files, loads the job, and runs a test
 notification. For a low-noise setup, run it from launchd every 15 minutes with
-`--min-interval 60 --idle-minutes 15`: it stays silent while files or commits are
-recent and reminds only after 15 minutes of inactivity. `--test-notification`
+`--min-interval 60 --idle-minutes 30 --force-after-minutes 240`: it normally stays
+silent while files or commits are recent, reminds after 30 minutes of
+inactivity, and still sends a 4-hour digest if the same state persists while you
+keep working. `--test-notification`
 verifies delivery, and `--log` records delivered reminders. Keep hooks compact:
 notifications themselves do not consume model tokens, but a per-turn hook that
 feeds output back to the model can add context tokens. Never add an auto-push

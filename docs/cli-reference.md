@@ -210,7 +210,9 @@ MINUTES` (default 60); `--state PATH` (default
 `~/.cache/skill-atlas/sync-notify.json`); `--fetch` (off by default; only updates
 remote-tracking refs); `--fetch-timeout SECONDS` (default 10); `--include-dirty`
 (off by default); `--idle-minutes MINUTES` (default 0 = off; suppress while the
-worktree had file/commit activity within the window); `--sound NAME` (macOS
+worktree had file/commit activity within the window); `--force-after-minutes
+MINUTES` (default 0 = off; send a digest of the same state after it persists this
+long while active; respects `--min-interval`); `--sound NAME` (macOS
 notification sound, default `Glass`; empty string disables); `--log PATH` (append
 a JSON-lines delivery log; default `~/.cache/skill-atlas/sync-notify.log`);
 `--test-notification` (send one test notification and exit, no repositories
@@ -220,11 +222,13 @@ remote, and detached HEAD; dirty state is actionable only with
 `--test-notification` is used.
 
 `--channel json` returns `{status, channel, checked, notified, suppressed,
-skipped, fetch_errors, state_file, log_file, idle_minutes, fetch, notes}`.
+skipped, fetch_errors, state_file, log_file, idle_minutes, force_after_minutes,
+fetch, notes}`.
 `status` is `notified` when at least one worktree was newly actionable, otherwise
 `clean` (including when all actionable states were suppressed); a
 `--test-notification` run returns `status: "test-notification"` with empty lists,
-`state_file`, `log_file`, `fetch: false`, and no `checked`/`idle_minutes`. Each
+`state_file`, `log_file`, `fetch: false`, and no `checked`/`idle_minutes`/
+`force_after_minutes`. Each
 `notified`/`suppressed` entry has `project`, `path`, `branch`, `has_upstream`,
 `ahead`, `behind`, `dirty`, `detached`, `commit`, and `warnings`;
 idle-suppressed entries add `reason: "recent activity"`. `skipped` entries add
@@ -250,12 +254,13 @@ python3 <skill-root>/scripts/skill_atlas.py sync setup --confirm --no-test
 Flags: repeated `--project PATH` (defaults to the Git repository of the current
 directory); `--interval MINUTES` (default 15; plist `StartInterval` is at least
 60 seconds); `--idle-minutes MINUTES` (default 30); `--min-interval MINUTES`
-(default 60); `--confirm` (write files, install the LaunchAgent, run a test
+(default 60); `--force-after-minutes MINUTES` (default 240; digest a long-lived
+active state); `--confirm` (write files, install the LaunchAgent, run a test
 notification); `--no-test`; `--format markdown|json`.
 
 Without `--confirm` the result is a read-only preview with `status: "preview"`,
 `registry`, `plist`, `projects`, `interval_minutes`, `idle_minutes`,
-`min_interval`, `plist_document`, and `notes`. With `--confirm` it writes
+`min_interval`, `force_after_minutes`, `plist_document`, and `notes`. With `--confirm` it writes
 `~/.config/skill-atlas/watch.json` (merging project paths and preserving existing
 keys) and `~/Library/LaunchAgents/com.skill-atlas.sync-notify.plist`, backs up
 existing files as `*.bak-<timestamp>`, bootstraps the LaunchAgent, and optionally

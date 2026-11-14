@@ -518,7 +518,7 @@ python3 /path/to/skill-atlas/scripts/skill_atlas.py closeout audit --project .
 python3 /path/to/skill-atlas/scripts/skill_atlas.py closeout evals
 ```
 
-检查点使用 Git 分支、HEAD、工作区变更数量和状态指纹；它在 `.agent-state/` 下保存任务范围的当前 JSON 快照以及不可变的本地历史。该状态是本地的，保持未提交。测试结果标记为 **Agent 报告**，而不是独立执行。`resume` 严格只读，并会标记过期的 Git 证据。检查点和交接结果现在包含只读的 `git.sync` 块，以及无上游、未推送提交、落后于远端跟踪分支、未提交变更或 detached HEAD 的警告。可随时运行 `python3 scripts/skill_atlas.py sync status --project .` 获取同样的提醒——在里程碑、交接前或一个工作块结束时。它不是后台计时器：只有你主动调用时才运行。它从不 fetch、push、提交或切换分支；是否推送已审核的提交由你决定。可选的 `sync notify` 命令可以从 hook 或调度器中获取同样的提醒：`python3 scripts/skill_atlas.py sync notify --project .`（默认 macOS 通知；可用 `--channel stderr|json`；`--idle-minutes` 会在你持续编辑时保持安静；`--test-notification` 可验证通知是否送达；干净时静默、去重、从不推送）。在 macOS 上，`sync setup` 会预览通知任务，`--confirm` 则安装它：`python3 scripts/skill_atlas.py sync setup --confirm`。没有命令会提交代码、推送状态、派发另一个 Agent 或切换模型。
+检查点使用 Git 分支、HEAD、工作区变更数量和状态指纹；它在 `.agent-state/` 下保存任务范围的当前 JSON 快照以及不可变的本地历史。该状态是本地的，保持未提交。测试结果标记为 **Agent 报告**，而不是独立执行。`resume` 严格只读，并会标记过期的 Git 证据。检查点和交接结果现在包含只读的 `git.sync` 块，以及无上游、未推送提交、落后于远端跟踪分支、未提交变更或 detached HEAD 的警告。可随时运行 `python3 scripts/skill_atlas.py sync status --project .` 获取同样的提醒——在里程碑、交接前或一个工作块结束时。它不是后台计时器：只有你主动调用时才运行。它从不 fetch、push、提交或切换分支；是否推送已审核的提交由你决定。可选的 `sync notify` 命令可以从 hook 或调度器中获取同样的提醒：`python3 scripts/skill_atlas.py sync notify --project .`（默认 macOS 通知；可用 `--channel stderr|json`；`--idle-minutes` 会在你持续编辑时保持安静，而 `--force-after-minutes 240` 仍会为长时间持续的活跃工作发送 4 小时摘要；`--test-notification` 可验证通知是否送达；干净时静默、去重、从不推送）。在 macOS 上，`sync setup` 会预览通知任务，`--confirm` 则安装它：`python3 scripts/skill_atlas.py sync setup --confirm`。没有命令会提交代码、推送状态、派发另一个 Agent 或切换模型。
 
 ![[FlowCue Pro](https://github.com/Jorgut/flowcue) 的目标 macOS 通知：品牌横幅中显示仓库、分支和未推送数量。当前轻量版 `osascript` 可能显示 Script Editor，且没有自定义按钮。](docs/assets/sync-notification-mockup.zh-CN.png)
 
@@ -590,4 +590,4 @@ python3 -m unittest discover -s tests -v
 
 ## 状态
 
-Skill Atlas 当前为 `0.13.0-beta`。在稳定版发布前，接口和平台适配器可能发生变化。
+Skill Atlas 当前为 `0.13.1-beta`。在稳定版发布前，接口和平台适配器可能发生变化。

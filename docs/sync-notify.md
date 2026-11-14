@@ -2,7 +2,8 @@
 
 `sync notify` is an optional, lightweight notification command added in
 `0.12.0-beta`; `0.12.1-beta` adds idle-aware suppression, a notification sound, a
-JSON-lines delivery log, and a test notification. It checks one or more Git
+JSON-lines delivery log, and a test notification; `0.13.1-beta` adds a periodic
+digest for long-lived active work. It checks one or more Git
 repositories (and their worktrees) and notifies you only when there is something
 that needs attention — an unpushed commit, a branch with no upstream, a
 remote-tracking branch that is ahead, or a detached HEAD. It is silent when
@@ -26,6 +27,8 @@ It **is**:
 - worktree-aware: each repository expands to its Git worktrees;
 - deduplicated through a local state file and a minimum interval;
 - idle-aware: `--idle-minutes` defers reminders until a worktree has been quiet;
+- digest-capable: `--force-after-minutes` can resend the same state as a periodic
+  digest while you stay active;
 - quiet when clean, compact when not;
 - usable from macOS notifications, stderr, or JSON output;
 - testable (`--test-notification`) and optionally logged (`--log`).
@@ -63,6 +66,10 @@ python3 <skill-root>/scripts/skill_atlas.py sync notify --project . --include-di
 # Stay quiet while actively editing; notify only after 15 idle minutes.
 python3 <skill-root>/scripts/skill_atlas.py sync notify --project . --idle-minutes 15 --channel stderr
 
+# Keep the idle behavior, but get a digest after the same state persists 4 hours.
+python3 <skill-root>/scripts/skill_atlas.py sync notify --project . \
+  --idle-minutes 30 --force-after-minutes 240 --channel stderr
+
 # Verify notification delivery once, then exit (no repositories checked).
 python3 <skill-root>/scripts/skill_atlas.py sync notify --test-notification
 
@@ -81,6 +88,7 @@ python3 <skill-root>/scripts/skill_atlas.py sync notify --project . --log ~/.cac
 | `--fetch-timeout SECONDS` | Time limit per repository fetch (default 10). |
 | `--include-dirty` | Treat uncommitted changes as actionable too. Off by default. |
 | `--idle-minutes MINUTES` | Suppress notifications while the worktree had file or commit activity within this window (default 0 = off). |
+| `--force-after-minutes MINUTES` | Send a digest of the same state once it has persisted this long, even while active (default 0 = off). Respects `--min-interval`. |
 | `--sound NAME` | macOS notification sound name (default `Glass`); pass an empty string to disable the sound. |
 | `--log PATH` | Append a JSON-lines notification log (default `~/.cache/skill-atlas/sync-notify.log`). |
 | `--test-notification` | Send one test notification and exit; no repositories are checked. |
@@ -149,14 +157,33 @@ with `reason: "recent activity"` and no notification is sent.
 
 - A commit counts as activity: an unpushed commit is not announced until the
   worktree has been quiet for the idle window.
-- Idle suppression does not advance the dedupe state, so the reminder can still
-  be delivered once the worktree goes idle (subject to `--min-interval`).
+- Idle suppression preserves the persistence timer but does not count as a
+  notification; the reminder can still be delivered later, or forced as a
+  digest, subject to `--min-interval`.
 - The recommended launchd setup checks every 15 minutes with
-  `--min-interval 60 --idle-minutes 15`: while you edit it stays silent, and
-  after 15 minutes without changes at most one notification is sent for that
-  state.
+  `--min-interval 60 --idle-minutes 30 --force-after-minutes 240`: while you
+  edit it normally stays silent; after 30 minutes without activity it sends a
+  reminder; and if the same state persists while you remain active, it sends a
+  digest after 4 hours (see below).
 - This is a local file-mtime/commit-time heuristic, not detection of user
   presence or activity in other applications.
+
+## Periodic digest for long-lived active work
+
+`--force-after-minutes N` (default 0, off) is for long-running active iteration
+where idle suppression would otherwise defer a reminder indefinitely. Once the
+same actionable state has persisted for N minutes, the command sends a digest of
+that state even though the worktree is still active.
+
+- The persistence timer starts when a state is first observed. It resets after a
+  normal notification, after a digest, and when the state changes.
+- `--min-interval` still applies: a digest is not sent sooner than the minimum
+  interval since the last notification. Repeated digests for an unchanged state
+  are spaced by `max(--force-after-minutes, --min-interval)`.
+- If the worktree goes idle first, the normal reminder can fire before the
+  digest; the digest is a backstop, not a replacement for the idle reminder.
+- When a worktree becomes clean, its state entry is cleared and the timer starts
+  fresh on the next actionable state.
 
 ## Sound
 
@@ -188,22 +215,28 @@ channel).
 ## Deduplication and interval
 
 The state file (default `~/.cache/skill-atlas/sync-notify.json`, override with
-`--state`) records the last notified state per worktree path. When the same
-branch/commit/ahead/behind/upstream/detached state is seen again inside
-`--min-interval` minutes (default 60), the entry is added to `suppressed` instead
-of `notified`; `macos` and `stderr` stay silent, and `json` reports
-`status: clean` with a non-empty `suppressed` list.
+`--state`) records the state per worktree path: the branch/commit/ahead/behind/
+upstream/detached key plus `first_seen_at` and `notified_at` timestamps. When the
+same state is seen again inside `--min-interval` minutes (default 60), the entry
+is added to `suppressed` instead of `notified`; `macos` and `stderr` stay silent,
+and `json` reports `status: clean` with a non-empty `suppressed` list.
 
 - Delete the state file to re-arm notifications.
 - A changed commit, branch, ahead/behind count, upstream presence, or detached
-  state produces a new notification.
+  state produces a new state and notification.
 - Uncommitted-only changes are not part of the dedupe key. With
   `--include-dirty`, a worktree whose only change is dirty state may stay
   suppressed until the interval elapses; use `--min-interval 0` if you genuinely
   want every dirty check reported.
+- `--force-after-minutes` uses the same timestamps: it can turn a long-persisting
+  idle-suppressed state into a digest once the persistence and minimum-interval
+  conditions are met.
+- A worktree that becomes clean has its state entry removed, so a future warning
+  starts a fresh persistence timer.
 
 Idle-suppressed worktrees appear in `suppressed` with
-`reason: "recent activity"` and do not advance the dedupe state; interval/state
+`reason: "recent activity"` and keep their persistence timer; they do not count
+as a notification, so a later reminder or digest remains possible. Interval/state
 suppression entries have no reason. State is local; nothing is uploaded and no
 remote service is used to deduplicate.
 
@@ -267,6 +300,7 @@ a report.
 | `state_file` | Deduplication state file path |
 | `log_file` | Delivery log path (whether or not it was written) |
 | `idle_minutes` | Idle window used for suppression (`0` means off) |
+| `force_after_minutes` | Digest persistence window (`0` means off) |
 | `fetch` | Whether `--fetch` was requested |
 | `notes` | A reminder that checks are read-only and nothing is pushed |
 
@@ -278,8 +312,8 @@ Each entry in `notified` and `suppressed` has `project` (repository root), `path
 `--test-notification --channel json` prints a test result instead:
 `status: "test-notification"`, `channel`, empty `notified`/`suppressed`/
 `skipped`/`fetch_errors`, `state_file`, `log_file`, `fetch: false`, and `notes`.
-It does not include `checked` or `idle_minutes` because no repositories were
-checked.
+It does not include `checked`, `idle_minutes`, or `force_after_minutes` because
+no repositories were checked.
 
 ## Optional wiring
 
@@ -345,9 +379,10 @@ Codex version.
 ### launchd (macOS), every 15 minutes
 
 A user LaunchAgent can run an explicit project list or registry periodically.
-This example checks every 15 minutes with `--min-interval 60 --idle-minutes 15`,
-so it stays silent while you are editing and sends a reminder only after 15
-minutes of inactivity. Save as
+This example checks every 15 minutes with `--min-interval 60 --idle-minutes 30
+--force-after-minutes 240`, so it normally stays silent while you are editing,
+sends a reminder after 30 minutes of inactivity, and still sends a 4-hour digest
+for a long-lived active state. Save as
 `~/Library/LaunchAgents/local.skill-atlas.sync-notify.plist`:
 
 ```xml
@@ -372,7 +407,9 @@ minutes of inactivity. Save as
     <string>--min-interval</string>
     <string>60</string>
     <string>--idle-minutes</string>
-    <string>15</string>
+    <string>30</string>
+    <string>--force-after-minutes</string>
+    <string>240</string>
   </array>
   <key>StartInterval</key>
   <integer>900</integer>
@@ -389,7 +426,8 @@ with a limited environment and can differ from your shell; verify that the job
 actually runs. This is a scheduler, not a Skill Atlas daemon — it invokes one
 check per interval and then exits. Reduce `StartInterval` only if you want
 finer-grained idle detection; `--idle-minutes` controls how long the worktree
-must be quiet, and `--min-interval 60` prevents repeated reminders for the same
+must be quiet, `--force-after-minutes` sets the digest backstop for continuous
+activity, and `--min-interval 60` prevents repeated reminders for the same
 state.
 
 ### Token and cost notes
@@ -414,7 +452,8 @@ state.
 2. **Check the channel.** `--channel stderr` or `--channel json` proves the check
    ran even when the OS blocks notifications.
 3. **Check suppression.** `--idle-minutes` defers while files or commits are
-   recent; `--min-interval`/the state file suppress identical state. For a clean
+   recent; `--min-interval`/the state file suppress identical state; a digest is
+   only expected after `--force-after-minutes` of the same state. For a clean
    test, use `--min-interval 0` and a temporary `--state`/`--log` path, and inspect
    `suppressed` (including any `recent activity` reason).
 4. **Check that there is actionable state.** A clean, pushed worktree stays
@@ -462,6 +501,10 @@ for the wider handoff convention.
 - **Deduplication is local and approximate.** The state file is per user; dirty
   changes are not part of the dedupe key; changing only dirty state with
   `--include-dirty` may be suppressed until the interval ends.
+- **Digests are backstops, not guaranteed reminders.** `--force-after-minutes`
+  sends a digest only when the same state persists, the persistence window has
+  elapsed, and `--min-interval` allows it. A state change, cleanup, or a normal
+  notification resets the persistence timer.
 - **Non-Git paths are skipped.** At least one valid project is required; invalid
   registries and missing targets are refused.
 - **No cleanup.** The command does not delete or truncate worktrees, branches, or

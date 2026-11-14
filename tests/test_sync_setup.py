@@ -69,6 +69,8 @@ class SyncSetupTests(unittest.TestCase):
         self.assertEqual(plist["StartInterval"], 900)
         self.assertIn("--idle-minutes", plist["ProgramArguments"])
         self.assertEqual(plist["ProgramArguments"][plist["ProgramArguments"].index("--idle-minutes") + 1], "30")
+        self.assertIn("--force-after-minutes", plist["ProgramArguments"])
+        self.assertEqual(plist["ProgramArguments"][plist["ProgramArguments"].index("--force-after-minutes") + 1], "240")
 
     def test_existing_registry_is_merged_and_backed_up(self):
         registry_path = self.home / ".config/skill-atlas/watch.json"
