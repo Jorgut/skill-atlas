@@ -17,6 +17,7 @@ import agent_environments
 import agent_handoff
 import agent_messages
 import disk_scan
+import sync_setup
 import handoff_advisor
 import project_roots
 import feedback_loop
@@ -960,6 +961,18 @@ def handle_sync(args: argparse.Namespace) -> None:
     print(f"- note: {result['notes']}")
 
 
+def handle_sync_setup(args: argparse.Namespace) -> None:
+    try:
+        result = sync_setup.setup(args)
+    except sync_setup.SetupError as exc:
+        print(f"Skill Atlas sync setup refused: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    if args.format == "json":
+        json_print(result)
+    else:
+        sync_setup.emit_markdown(result)
+
+
 def add_sync_commands(subparsers: argparse._SubParsersAction) -> None:
     sync = subparsers.add_parser(
         "sync", help="Read-only local Git sync status for handoff and periodic checks."
@@ -970,6 +983,11 @@ def add_sync_commands(subparsers: argparse._SubParsersAction) -> None:
     )
     agent_handoff.add_sync_arguments(status)
     status.set_defaults(handler=handle_sync)
+    setup = actions.add_parser(
+        "setup", help="Install the optional macOS notification LaunchAgent for chosen repositories."
+    )
+    sync_setup.add_arguments(setup)
+    setup.set_defaults(handler=handle_sync_setup)
     notify = actions.add_parser(
         "notify", help="Notify only when registered projects have unpushed or local-only commits."
     )
