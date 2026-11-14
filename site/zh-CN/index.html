@@ -42,7 +42,7 @@
         <p class="positioning">你的本地 Agent 环境图谱</p>
         <p class="lede">
           Skill Atlas 会报告你机器上存在哪些编码 Agent，每个 Agent 从何处加载规则与 Skill，
-          你本地的 Skill Atlas 副本是否彼此不一致，以及同一个项目是否在多个位置存在且文档已产生差异。它也会审计 Agent 工作占用的磁盘空间，并在交接前提醒只存在于本机的提交。
+          你本地的 Skill Atlas 副本是否彼此不一致，以及同一个项目是否在多个位置存在且文档已产生差异。它也会审计 Agent 工作占用的磁盘空间，并可安装可选的推送提醒；首次使用运行 <code>start</code> 查看引导。
           它是一个适用于 Codex、Claude Code、DeepSeek Harness、OpenCode、WorkBuddy、Kimi Code
           和其他 Agent 工具的 Skill。
         </p>
@@ -54,8 +54,8 @@
       </section>
 
       <section id="whats-new" aria-labelledby="whats-new-title">
-        <h2 id="whats-new-title">0.12 新增</h2>
-        <p class="section-note">代码写完之后，Agent 工作还有三件容易被忽略的事。</p>
+        <h2 id="whats-new-title">0.14 新增</h2>
+        <p class="section-note">新手引导、一条命令安装提醒，以及长时间迭代时的摘要。</p>
         <div class="grid three">
           <div class="card">
             <h3>磁盘审计</h3>
@@ -68,6 +68,18 @@
           <div class="card">
             <h3>轻量通知</h3>
             <p><code>sync notify</code> 可监控选定仓库及其 worktrees，只在确实需要推送时发 macOS 通知；干净时静默，绝不自动推送。</p>
+          </div>
+          <div class="card">
+            <h3>新手引导</h3>
+            <p><code>start</code> 会输出五条安全命令、文档链接、安全规则和建议顺序。Skill 本身不会自动弹窗，所以引导是显式、静态的。</p>
+          </div>
+          <div class="card">
+            <h3>一条命令安装提醒</h3>
+            <p><code>sync setup --confirm</code> 会写入 registry 和 macOS LaunchAgent、备份已有文件、加载并发送测试通知；建议先预览。</p>
+          </div>
+          <div class="card">
+            <h3>4 小时摘要</h3>
+            <p><code>--force-after-minutes 240</code> 在同一未推送状态持续时发摘要，即使你还在编辑；不会自动推送，仍受每小时去重限制。</p>
           </div>
         </div>
         <figure class="mockup">
@@ -200,6 +212,7 @@
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md"><strong>Agent 交接消息</strong><span>信封、回执、审批</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/disk-scan.md"><strong>磁盘占用审计</strong><span>空间、风险、可选废纸篓清理</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/sync-notify.md"><strong>同步通知</strong><span>未推送提交、可选 hook</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/start.md"><strong>新手引导</strong><span>五条安全命令与顺序</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/cli-reference.md"><strong>CLI 参考</strong><span>所有命令与标志</span></a>
         </div>
       </section>
@@ -208,7 +221,7 @@
 
   <footer>
     <div class="wrap">
-      <span>Skill Atlas · 0.12.1-beta · 本地优先，默认只读。</span>
+      <span>Skill Atlas · 0.14.0-beta · 本地优先，默认只读。</span>
       <span><a href="https://github.com/Jorgut/skill-atlas">GitHub</a> · <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/GETTING_STARTED.zh-CN.md">新手教程</a> · 无跟踪器、无 Cookie</span>
     </div>
   </footer>

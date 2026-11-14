@@ -43,7 +43,7 @@
         <p class="lede">
           Skill Atlas reports which coding agents exist on your machine, where each one loads rules and skills from,
           whether your local Skill Atlas copies disagree, and where the same project exists in more than one place
-          with drifted documents. It also audits what agent work leaves on disk and reminds you about local-only commits before a handoff. It is a skill for Codex, Claude Code, DeepSeek Harness, OpenCode, WorkBuddy,
+          with drifted documents. It also audits what agent work leaves on disk and can install optional push reminders; run <code>start</code> for a guided first tour. It is a skill for Codex, Claude Code, DeepSeek Harness, OpenCode, WorkBuddy,
           Kimi Code and other agent tools.
         </p>
         <div class="actions">
@@ -54,8 +54,8 @@
       </section>
 
       <section id="whats-new" aria-labelledby="whats-new-title">
-        <h2 id="whats-new-title">New in 0.12</h2>
-        <p class="section-note">Three additions for the part of agent work that happens after the code exists.</p>
+        <h2 id="whats-new-title">New in 0.14</h2>
+        <p class="section-note">Onboarding, one-command reminders, and a digest for long active sessions.</p>
         <div class="grid three">
           <div class="card">
             <h3>Disk audit</h3>
@@ -68,6 +68,18 @@
           <div class="card">
             <h3>Lightweight notifications</h3>
             <p><code>sync notify</code> can watch chosen repositories and their worktrees, then send a macOS notification only when a push is actually needed. Silent when clean; never auto-pushes.</p>
+          </div>
+          <div class="card">
+            <h3>First-run guide</h3>
+            <p><code>start</code> prints five safe commands, workflow links, safety rules and a suggested order. Skills cannot open UI by themselves, so the tour is explicit and static.</p>
+          </div>
+          <div class="card">
+            <h3>One-command reminders</h3>
+            <p><code>sync setup --confirm</code> writes a registry and a macOS LaunchAgent, backs up existing files, loads it and sends a test notification. Preview it first.</p>
+          </div>
+          <div class="card">
+            <h3>4-hour digest</h3>
+            <p><code>--force-after-minutes 240</code> sends a digest when the same unpushed state persists, even while you keep editing. It never auto-pushes; the hourly minimum still applies.</p>
           </div>
         </div>
         <figure class="mockup">
@@ -200,6 +212,7 @@
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/agent-messaging.md"><strong>Agent handoff messages</strong><span>Envelopes, receipts, approval</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/disk-scan.md"><strong>Disk usage audit</strong><span>Space, risk, opt-in Trash</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/sync-notify.md"><strong>Sync notifications</strong><span>Unpushed commits, opt-in hooks</span></a>
+          <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/start.md"><strong>First-run tour</strong><span>Five safe commands and order</span></a>
           <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/cli-reference.md"><strong>CLI reference</strong><span>Every command and flag</span></a>
         </div>
       </section>
@@ -208,7 +221,7 @@
 
   <footer>
     <div class="wrap">
-      <span>Skill Atlas · 0.12.1-beta · local-first, read-only by default.</span>
+      <span>Skill Atlas · 0.14.0-beta · local-first, read-only by default.</span>
       <span><a href="https://github.com/Jorgut/skill-atlas">GitHub</a> · <a href="https://github.com/Jorgut/skill-atlas/blob/main/docs/GETTING_STARTED.en.md">Beginner guide</a> · no trackers, no cookies</span>
     </div>
   </footer>
