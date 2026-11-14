@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:#f2f5f4; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif; color:#0b1f2a; }
+  .page { width:1600px; padding:48px 56px 42px; }
+  h1 { font-size:30px; margin:0 0 6px; letter-spacing:-.5px; }
+  .sub { color:#5a6f78; font-size:15px; margin:0 0 34px; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+  .col { background:#fff; border:1px solid #dfe8e5; border-radius:24px; padding:24px 24px 22px; box-shadow:0 10px 28px rgba(8,35,45,.06); }
+  .tag { display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:700; letter-spacing:.12em; color:#0e6f6a; text-transform:uppercase; }
+  .tag b { display:inline-flex; width:26px; height:26px; border-radius:8px; background:#0e6f6a; color:#fff; align-items:center; justify-content:center; font-size:13px; }
+  h2 { font-size:23px; margin:10px 0 6px; letter-spacing:-.3px; }
+  .desc { color:#4b6270; font-size:14px; line-height:1.5; margin:0 0 18px; min-height:42px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:18px; }
+  .hero img { width:160px; height:160px; border-radius:38px; }
+  .lockup { display:flex; align-items:center; gap:10px; }
+  .lockup img { width:44px; height:44px; border-radius:11px; }
+  .lockup span { font-size:22px; font-weight:700; letter-spacing:-.6px; }
+  .meta { border-top:1px solid #e6eeeb; padding-top:14px; margin-top:4px; }
+  .meta p { font-size:13px; line-height:1.5; margin:0 0 8px; color:#3f5660; }
+  .meta b { color:#0b1f2a; }
+  .small { display:flex; align-items:center; gap:12px; margin-top:12px; }
+  .small img { width:16px; height:16px; border-radius:4px; }
+  .small img:nth-child(2){width:24px;height:24px;border-radius:6px}
+  .small img:nth-child(3){width:36px;height:36px;border-radius:9px}
+  .small span { font-size:12px; color:#77888f; }
+  .palette { display:flex; gap:8px; margin-top:10px; }
+  .sw { width:18px; height:18px; border-radius:5px; border:1px solid rgba(0,0,0,.06); }
+  .foot { display:flex; justify-content:space-between; color:#73858b; font-size:12.5px; margin-top:28px; }
+  .note { background:#0b3d62; color:#d9f6ef; border-radius:16px; padding:16px 20px; margin-top:24px; font-size:13.5px; line-height:1.6; }
+  .note b { color:#fff; }
+</style></head>
+<body><div class="page">
+  <h1>Skill Atlas — 三个 logo 方向</h1>
+  <p class="sub">同一套颜色与字标下比较：哪个方向既有“环境图谱”的含义，又不容易撞车？</p>
+  <div class="grid">
+    <div class="col">
+      <div class="tag"><b>A1</b> FOLDED TILES</div>
+      <h2>折叠地图瓦片</h2>
+      <p class="desc">四块地图瓦片，一块被“折”出来并高亮；用路径把它们连成一个环境。</p>
+      <div class="hero"><img src="A1-folded-tiles.svg" alt="A1"><div class="lockup"><img src="A1-folded-tiles.svg" alt=""><span>Skill Atlas</span></div></div>
+      <div class="small"><img src="A1-folded-tiles.svg" alt=""><img src="A1-folded-tiles.svg" alt=""><img src="A1-folded-tiles.svg" alt=""><span>16 / 24 / 36 px</span></div>
+      <div class="meta">
+        <p><b>含义：</b>地图、环境、项目边界；“折出来的一块”像当前 agent/项目。</p>
+        <p><b>优点：</b>可扩展成网格图案、容易做动效；黑白可用。</p>
+        <p><b>风险：</b>四宫格容易联想到通用产品/窗口，需要靠折角与路径拉开差异。</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="tag"><b>A2</b> NODE LATTICE</div>
+      <h2>节点场</h2>
+      <p class="desc">六个环境节点 + 一个高亮中心，连线像一次扫描路径，强调“agent / skill / project 的关系”。</p>
+      <div class="hero"><img src="A2-node-lattice.svg" alt="A2"><div class="lockup"><img src="A2-node-lattice.svg" alt=""><span>Skill Atlas</span></div></div>
+      <div class="small"><img src="A2-node-lattice.svg" alt=""><img src="A2-node-lattice.svg" alt=""><img src="A2-node-lattice.svg" alt=""><span>16 / 24 / 36 px</span></div>
+      <div class="meta">
+        <p><b>含义：</b>环境、连接、扫描；高亮中心像“当前项目/当前 agent”。</p>
+        <p><b>优点：</b>独特性较好；不像罗盘/星芒；可以做成节点逐个亮起的动效。</p>
+        <p><b>风险：</b>节点/星座是 AI 领域常见语言；小尺寸要靠高对比维持可读性。</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="tag"><b>A3</b> FOLDED A</div>
+      <h2>折页 A</h2>
+      <p class="desc">三条“地图折带”组成一个 A，缺口与折角就是 atlas 的折页感；高亮一侧代表当前路径。</p>
+      <div class="hero"><img src="A3-folded-a.svg" alt="A3"><div class="lockup"><img src="A3-folded-a.svg" alt=""><span>Skill Atlas</span></div></div>
+      <div class="small"><img src="A3-folded-a.svg" alt=""><img src="A3-folded-a.svg" alt=""><img src="A3-folded-a.svg" alt=""><span>16 / 24 / 36 px</span></div>
+      <div class="meta">
+        <p><b>含义：</b>Atlas 的 A + 折页地图；最直接品牌首字母。</p>
+        <p><b>优点：</b>小尺寸最稳；和字标关系强；黑白/单色最容易成立。</p>
+        <p><b>风险：</b>字母 A 类 logo 很多；需要靠“折带/缺口”的细节做出专属性。</p>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>共同约束：</b>先保证黑白、16px、无渐变也能成立；颜色只做强调。不采用罗盘针/星芒/多面体/发光渐变等 AI 高频符号。字标字体（衬线 vs 无衬线）下一轮再定。</div>
+  <div class="foot"><span>Skill Atlas · draft directions · 2026-11-15</span><span>concepts: folded tiles / node lattice / folded A</span></div>
+</div></body></html>
