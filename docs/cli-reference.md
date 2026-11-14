@@ -233,6 +233,40 @@ idle-suppressed entries add `reason: "recent activity"`. `skipped` entries add
 log, test notification, deduplication, optional fetch, macOS caveats, and wiring
 examples.
 
+### `sync setup`
+
+`sync setup` previews or installs a macOS LaunchAgent that periodically runs
+`sync notify` for a list of Git repositories. It is preview-first, never pushes,
+fetches, commits, or changes a repository, and `--confirm` is required for any
+write.
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py sync setup
+python3 <skill-root>/scripts/skill_atlas.py sync setup \
+  --project ~/repos/one --project ~/repos/two --confirm
+python3 <skill-root>/scripts/skill_atlas.py sync setup --confirm --no-test
+```
+
+Flags: repeated `--project PATH` (defaults to the Git repository of the current
+directory); `--interval MINUTES` (default 15; plist `StartInterval` is at least
+60 seconds); `--idle-minutes MINUTES` (default 30); `--min-interval MINUTES`
+(default 60); `--confirm` (write files, install the LaunchAgent, run a test
+notification); `--no-test`; `--format markdown|json`.
+
+Without `--confirm` the result is a read-only preview with `status: "preview"`,
+`registry`, `plist`, `projects`, `interval_minutes`, `idle_minutes`,
+`min_interval`, `plist_document`, and `notes`. With `--confirm` it writes
+`~/.config/skill-atlas/watch.json` (merging project paths and preserving existing
+keys) and `~/Library/LaunchAgents/com.skill-atlas.sync-notify.plist`, backs up
+existing files as `*.bak-<timestamp>`, bootstraps the LaunchAgent, and optionally
+sends a test notification. The installed result adds `backups`,
+`launchctl_loaded`, `launchctl_output`, `test_notification`, `test_error`, and
+`notes`; `status` is `installed` when `launchctl bootstrap` succeeds, otherwise
+`error` (files are still written). Invalid repositories, an invalid existing
+registry, or a non-macOS `--confirm` are refused with exit status 2. See
+[Sync Notification Setup](sync-setup.md) for files, uninstall, and macOS
+notification permissions.
+
 See [Installation and Development Layout](development-layout.md#push-before-you-hand-off-and-during-long-work)
 for recommended cadence, optional shell/scheduler/hook wiring, and the rule to never auto-push.
 

@@ -223,14 +223,18 @@ identical state per worktree through a local state file and `--min-interval`
 remote-tracking refs; it never pushes, merges, or commits.
 
 To make the reminder proactive, wire `sync notify` into your own shell alias,
-Claude Code/Codex hook, or launchd/cron job. For a low-noise setup, run it from
-launchd every 15 minutes with `--min-interval 60 --idle-minutes 15`: it stays
-silent while files or commits are recent and reminds only after 15 minutes of
-inactivity. `--test-notification` verifies delivery, and `--log` records
-delivered reminders. Keep hooks compact: notifications themselves do not consume
-model tokens, but a per-turn hook that feeds output back to the model can add
-context tokens. Never add an auto-push step. Concrete hook/launchd examples and
-caveats are in [Sync Notifications](sync-notify.md).
+Claude Code/Codex hook, or launchd/cron job. On macOS, the one-command path is
+`sync setup`: it previews by default and, with `--confirm`, writes the watch
+registry and LaunchAgent, backs up existing files, loads the job, and runs a test
+notification. For a low-noise setup, run it from launchd every 15 minutes with
+`--min-interval 60 --idle-minutes 15`: it stays silent while files or commits are
+recent and reminds only after 15 minutes of inactivity. `--test-notification`
+verifies delivery, and `--log` records delivered reminders. Keep hooks compact:
+notifications themselves do not consume model tokens, but a per-turn hook that
+feeds output back to the model can add context tokens. Never add an auto-push
+step. Concrete hook/launchd examples and caveats are in
+[Sync Notifications](sync-notify.md); the installer is documented in
+[Sync Notification Setup](sync-setup.md).
 
 ## Limitations
 
