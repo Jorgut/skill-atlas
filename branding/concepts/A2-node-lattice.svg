@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Skill Atlas concept A2, node lattice">
+  <defs>
+    <linearGradient id="a2bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b3d62"/><stop offset="1" stop-color="#0e6f6a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#a2bg)"/>
+  <g fill="none" stroke="#bff5e6" stroke-opacity="0.34" stroke-width="10">
+    <path d="M512 214 L310 424 L220 700 L512 756 L804 700 L714 424 Z"/>
+    <path d="M310 424 L512 512 L714 424"/>
+    <path d="M220 700 L512 512 L804 700"/>
+  </g>
+  <g fill="#ecfff9">
+    <circle cx="512" cy="214" r="30"/><circle cx="310" cy="424" r="30"/>
+    <circle cx="714" cy="424" r="30"/><circle cx="220" cy="700" r="30"/>
+    <circle cx="512" cy="756" r="30"/><circle cx="804" cy="700" r="30"/>
+  </g>
+  <circle cx="512" cy="512" r="62" fill="#2ce0b8"/>
+  <circle cx="512" cy="512" r="25" fill="#0b3d62"/>
+  <g fill="#0b3d62">
+    <circle cx="512" cy="214" r="10"/><circle cx="310" cy="424" r="10"/><circle cx="714" cy="424" r="10"/>
+    <circle cx="220" cy="700" r="10"/><circle cx="512" cy="756" r="10"/><circle cx="804" cy="700" r="10"/>
+  </g>
+</svg>

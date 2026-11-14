@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Skill Atlas concept A1, folded map tiles">
+  <defs>
+    <linearGradient id="a1bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b3d62"/><stop offset="1" stop-color="#0e6f6a"/>
+    </linearGradient>
+    <linearGradient id="a1hi" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2ce0b8"/><stop offset="1" stop-color="#13a08b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#a1bg)"/>
+  <g stroke="#dffff7" stroke-opacity="0.16" stroke-width="14" fill="none">
+    <path d="M150 300 H874"/><path d="M150 512 H874"/><path d="M150 724 H874"/>
+    <path d="M300 150 V874"/><path d="M512 150 V874"/><path d="M724 150 V874"/>
+  </g>
+  <!-- four map tiles, one folded out -->
+  <g>
+    <rect x="168" y="168" width="286" height="286" rx="54" fill="#ecfff9"/>
+    <rect x="570" y="168" width="286" height="286" rx="54" fill="#bff5e6" opacity="0.82"/>
+    <rect x="168" y="570" width="286" height="286" rx="54" fill="#ecfff9" opacity="0.92"/>
+    <g transform="rotate(8 700 700)">
+      <rect x="570" y="570" width="300" height="300" rx="58" fill="url(#a1hi)"/>
+      <circle cx="720" cy="720" r="34" fill="#0b3d62"/>
+      <circle cx="720" cy="720" r="13" fill="#ecfff9"/>
+    </g>
+  </g>
+  <!-- route through tile centers -->
+  <path d="M311 311 L713 311 L713 713 L311 713 Z" fill="none" stroke="#0b3d62" stroke-opacity="0.35" stroke-width="14" stroke-dasharray="1 30" stroke-linecap="round"/>
+</svg>
