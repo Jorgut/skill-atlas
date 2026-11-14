@@ -210,6 +210,16 @@ python3 scripts/skill_atlas.py install \
   --commands
 ```
 
+## First run
+
+After installation, run the explicit first-run tour:
+
+```bash
+python3 scripts/skill_atlas.py start
+```
+
+It prints five safe starting commands, links to the workflow guides, the safety rules, and a suggested order. It is one-shot and static: skills cannot open UI on their own, so it runs only when asked, and it makes no scans or changes. The tour suggests `sync setup --confirm` as the final step; preview it without `--confirm` and review it first. See [First-Run Tour](docs/start.md).
+
 ## Platform Behavior
 
 | Platform | Skill path | Command adapter | Invoke after installation |
@@ -226,6 +236,7 @@ Codex does not use the bundled Markdown slash-command adapter. In Codex, invoke 
 
 | Command group | What it does | Example |
 | --- | --- | --- |
+| `start` | Print the explicit first-run tour: five safe commands, docs links, safety rules, and suggested order | `start --format json` |
 | `install` | Preview every copy and link, then apply only with explicit confirmation | `install --all-platforms --commands` |
 | `manage` | Scan skill roots; inspect status and upstream freshness; plan updates, deduplication, and consolidation; `manage self` handles Skill Atlas itself | `manage status --check-upstream` |
 | `discover` | Find similar public skills, alternatives, capability gaps, or competitor references | `discover competitors ux-audit` |
@@ -273,6 +284,7 @@ It reports both apparent and allocated sizes, categories, risk levels (low/mediu
 
 | Document | What it covers |
 | --- | --- |
+| [First-Run Tour](docs/start.md) | `start`: the explicit first-run tour, its five commands, JSON shape, suggested order, and limitations |
 | [Installation and Development Layout](docs/development-layout.md) | Which copy is the source of truth, where worktrees, installation copies, and archives belong, and how to keep an installation honest |
 | [Local Agent Environment Scan](docs/agent-environments.md) | `agents scan`: the tool catalog, evidence levels, copy audit, version mismatch, and what the scan cannot prove |
 | [Project Root and Duplicate Documentation Audit](docs/project-root-audit.md) | `projects audit`: duplicate-copy evidence, document hashing, nested roots, and plan-only recommendations |
@@ -599,4 +611,4 @@ For the recommended local checkout, worktree, installation and archive layout â€
 
 ## Status
 
-Skill Atlas is currently `0.13.1-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.14.0-beta`. Interfaces and platform adapters may change before the stable release.

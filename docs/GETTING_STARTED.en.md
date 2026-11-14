@@ -4,6 +4,8 @@
 
 This guide is for people who are new to Agent Skills, symbolic links, or command-line tools. Follow the sections in order.
 
+> New here? Run `python3 scripts/skill_atlas.py start` for a first-run tour, or read [the first-run guide](start.md).
+
 ## 1. What Skill Atlas Does
 
 | Goal | Command |

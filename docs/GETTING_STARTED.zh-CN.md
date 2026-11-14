@@ -4,6 +4,8 @@
 
 这份教程面向第一次使用 Agent Skill、不会配置软链接、也不熟悉命令行的用户。按顺序操作即可。
 
+> 第一次使用？运行 `python3 scripts/skill_atlas.py start` 获取首次使用引导，或阅读[首次使用指南](start.md)。
+
 ## 1. 先理解它能做什么
 
 Skill Atlas 有六组能力：

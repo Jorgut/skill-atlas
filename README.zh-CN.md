@@ -210,6 +210,16 @@ python3 scripts/skill_atlas.py install \
   --commands
 ```
 
+## 首次运行
+
+安装后，运行显式的首次使用引导：
+
+```bash
+python3 scripts/skill_atlas.py start
+```
+
+它会输出五个安全的起始命令、工作流文档链接、安全规则和建议顺序。它是一次性静态命令：Skill 无法自行弹出界面，因此只有被请求时才运行，也不会执行扫描或更改任何内容。引导会将 `sync setup --confirm` 作为最后一步；请先不带 `--confirm` 预览并检查。参见[首次使用引导](docs/start.md)。
+
 ## 平台行为
 
 | 平台 | Skill 路径 | 命令适配器 | 安装后如何调用 |
@@ -226,6 +236,7 @@ Codex 不使用捆绑的 Markdown slash 命令适配器。在 Codex 中，以 `$
 
 | 命令组 | 作用 | 示例 |
 | --- | --- | --- |
+| `start` | 输出显式的首次使用引导：五个安全命令、文档链接、安全规则和建议顺序 | `start --format json` |
 | `install` | 预览每个复制和链接，然后仅在明确确认后应用 | `install --all-platforms --commands` |
 | `manage` | 扫描 Skill 根目录；检查状态与上游新鲜度；规划更新、去重和合并；`manage self` 管理 Skill Atlas 自身 | `manage status --check-upstream` |
 | `discover` | 查找相似的公开 Skill、替代品、能力缺口或竞品参考 | `discover competitors ux-audit` |
@@ -273,6 +284,7 @@ python3 scripts/skill_atlas.py disk scan --apply --to-trash --confirm
 
 | 文档 | 内容 |
 | --- | --- |
+| [首次使用引导](docs/start.md) | `start`：显式首次使用引导、五个命令、JSON 结构、建议顺序和限制 |
 | [安装与开发布局](docs/development-layout.md) | 哪份副本是唯一事实源，worktree、安装副本和归档应放在哪里，以及如何让安装保持诚实 |
 | [本地 Agent 环境扫描](docs/agent-environments.md) | `agents scan`：工具目录、证据等级、副本审计、版本不一致，以及扫描无法证明什么 |
 | [项目根与重复文档审计](docs/project-root-audit.md) | `projects audit`：重复副本证据、文档哈希、嵌套根目录和仅计划建议 |
@@ -590,4 +602,4 @@ python3 -m unittest discover -s tests -v
 
 ## 状态
 
-Skill Atlas 当前为 `0.13.1-beta`。在稳定版发布前，接口和平台适配器可能发生变化。
+Skill Atlas 当前为 `0.14.0-beta`。在稳定版发布前，接口和平台适配器可能发生变化。
