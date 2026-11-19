@@ -290,6 +290,39 @@ registry, or a non-macOS `--confirm` are refused with exit status 2. See
 [Sync Notification Setup](sync-setup.md) for files, uninstall, and macOS
 notification permissions.
 
+### `sync helper`
+
+`sync helper` installs or removes the optional macOS menu-bar sync helper. It is
+preview-first, explicit, macOS-only for install/uninstall, and never pushes,
+fetches, commits, or changes a repository.
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py sync helper install
+python3 <skill-root>/scripts/skill_atlas.py sync helper install --confirm
+python3 <skill-root>/scripts/skill_atlas.py sync helper status
+python3 <skill-root>/scripts/skill_atlas.py sync helper uninstall
+python3 <skill-root>/scripts/skill_atlas.py sync helper uninstall --confirm
+```
+
+`install` flags: `--confirm` (build with `swiftc`, copy to
+`~/Applications/Skill Atlas Notify.app`, write
+`~/Library/Application Support/Skill Atlas/helper.json` and the login
+LaunchAgent `com.skill-atlas.notify-helper.plist`, load it, and open the app);
+`--interval SECONDS` (default 900; minimum 60); `--no-open` (do not launch after
+install); `--format markdown|json`. `uninstall` takes `--confirm` and `--format`.
+`status` takes `--format`.
+
+Preview output has `status: "preview"`, `app`, `config`, `plist`,
+`interval_seconds`, and `notes`. Installed output adds `launchctl_loaded` and
+`launchctl_output`; `status` is `installed` when bootstrap succeeds, otherwise
+`error` (files are already written). `status` reports `installed` or
+`not-installed` from the app path; uninstall preview returns app/plist/config
+paths and confirmed removal returns `removed`. Installation needs Xcode
+command-line tools/`swiftc`, creates no backups, and expects the shared
+`~/.config/skill-atlas/watch.json` registry (created by `sync setup`). See
+[Menu-Bar Sync Helper](sync-helper.md) for requirements, menu behavior, file
+access, uninstall, and limitations.
+
 See [Installation and Development Layout](development-layout.md#push-before-you-hand-off-and-during-long-work)
 for recommended cadence, optional shell/scheduler/hook wiring, and the rule to never auto-push.
 
