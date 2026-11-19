@@ -50,7 +50,7 @@ External hits are typed metadata candidates, not reviewed installation recommend
 
 ## Cross-Agent Context and Handoff
 
-When asked to connect agent tools, organize per-project memory, or verify shared context, read [docs/cross-agent-collaboration.md](docs/cross-agent-collaboration.md). Discover each tool's actual instruction entry, reuse existing project state, and distinguish configured files from verified loading and handoff. Rule-entry setup is agent-led; the optional task checkpoint CLI is described under Integrated Closeout and task continuity. After `checkpoint` or `handoff`, surface any unpushed or no-upstream warnings instead of treating the handoff as complete. During sustained iteration, run `sync status` at milestones and at the end of a work block; never push automatically. The opt-in `sync notify` command checks explicit projects/registry and their worktrees, notifies only actionable warnings (silent when clean, deduplicated), and never auto-pushes. It can defer reminders while work is active (`--idle-minutes`) and send a delivery test (`--test-notification`). On macOS, `sync setup` previews and, with `--confirm`, installs the notification LaunchAgent. Long-lived active work can still produce a periodic digest with `--force-after-minutes`. Apply setup changes only within the user's authorized scope and preserve backups and concurrent work.
+When asked to connect agent tools, organize per-project memory, or verify shared context, read [docs/cross-agent-collaboration.md](docs/cross-agent-collaboration.md). Discover each tool's actual instruction entry, reuse existing project state, and distinguish configured files from verified loading and handoff. Rule-entry setup is agent-led; the optional task checkpoint CLI is described under Integrated Closeout and task continuity. After `checkpoint` or `handoff`, surface any unpushed or no-upstream warnings instead of treating the handoff as complete. During sustained iteration, run `sync status` at milestones and at the end of a work block; never push automatically. The opt-in `sync notify` command checks explicit projects/registry and their worktrees, notifies only actionable warnings (silent when clean, deduplicated), and never auto-pushes. It can defer reminders while work is active (`--idle-minutes`) and send a delivery test (`--test-notification`). On macOS, `sync setup` previews and, with `--confirm`, installs the notification LaunchAgent. Long-lived active work can still produce a periodic digest with `--force-after-minutes`. When notifications are unavailable, the optional menu-bar helper (`sync helper install --confirm`) shows the same state without notification permission. Apply setup changes only within the user's authorized scope and preserve backups and concurrent work.
 
 For WorkBuddy setup, read the WorkBuddy adapter discovery section in that guide; verify its effective rules root, project-guidance precedence, account scope, and loading conditions.
 
@@ -176,7 +176,8 @@ skill-atlas
 ├── sync
 │   ├── status     read-only Git sync reminder for handoff and milestones
 │   ├── setup      preview/install the optional macOS notification LaunchAgent
-│   └── notify     opt-in sync notification; silent when clean, never pushes
+│   ├── notify     opt-in sync notification; silent when clean, never pushes
+│   └── helper     optional macOS menu-bar helper; opt-in, no notification permission
 ├── agents
 │   └── scan       read-only local evidence for agent tools, rules, and skills
 ├── disk

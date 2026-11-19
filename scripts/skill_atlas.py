@@ -18,6 +18,7 @@ import agent_handoff
 import agent_messages
 import disk_scan
 import sync_setup
+import sync_helper
 import start_guide
 import handoff_advisor
 import project_roots
@@ -990,6 +991,23 @@ def handle_sync_setup(args: argparse.Namespace) -> None:
         sync_setup.emit_markdown(result)
 
 
+def handle_sync_helper(args: argparse.Namespace) -> None:
+    try:
+        if args.action == "install":
+            result = sync_helper.install(args)
+        elif args.action == "uninstall":
+            result = sync_helper.uninstall(args)
+        else:
+            result = sync_helper.status(args)
+    except sync_helper.HelperError as exc:
+        print(f"Skill Atlas sync helper refused: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    if args.format == "json":
+        json_print(result)
+    else:
+        sync_helper.emit_markdown(result)
+
+
 def add_sync_commands(subparsers: argparse._SubParsersAction) -> None:
     sync = subparsers.add_parser(
         "sync", help="Read-only local Git sync status for handoff and periodic checks."
@@ -1010,6 +1028,19 @@ def add_sync_commands(subparsers: argparse._SubParsersAction) -> None:
     )
     agent_handoff.add_notify_arguments(notify)
     notify.set_defaults(handler=handle_sync)
+    helper = actions.add_parser(
+        "helper", help="Install or remove the optional macOS menu-bar sync helper."
+    )
+    helper_actions = helper.add_subparsers(dest="action", required=True)
+    helper_install = helper_actions.add_parser("install", help="Build/install the menu-bar helper and login item.")
+    sync_helper.add_install_arguments(helper_install)
+    helper_install.set_defaults(handler=handle_sync_helper)
+    helper_uninstall = helper_actions.add_parser("uninstall", help="Remove the helper, config and login item.")
+    sync_helper.add_confirm_arguments(helper_uninstall)
+    helper_uninstall.set_defaults(handler=handle_sync_helper)
+    helper_status = helper_actions.add_parser("status", help="Report whether the helper is installed.")
+    sync_helper.add_status_arguments(helper_status)
+    helper_status.set_defaults(handler=handle_sync_helper)
 
 
 def add_disk_commands(subparsers: argparse._SubParsersAction) -> None:

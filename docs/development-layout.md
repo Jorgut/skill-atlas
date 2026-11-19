@@ -236,7 +236,10 @@ notifications themselves do not consume model tokens, but a per-turn hook that
 feeds output back to the model can add context tokens. Never add an auto-push
 step. Concrete hook/launchd examples and caveats are in
 [Sync Notifications](sync-notify.md); the installer is documented in
-[Sync Notification Setup](sync-setup.md).
+[Sync Notification Setup](sync-setup.md). If notifications are unavailable or
+unreliable, the optional menu-bar helper (`sync helper install --confirm`) shows
+the same state in the macOS menu bar without notification permission; it polls
+`sync notify` and never pushes. See [Menu-Bar Sync Helper](sync-helper.md).
 
 ## Limitations
 
