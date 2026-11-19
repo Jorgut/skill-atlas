@@ -129,7 +129,7 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
         "launchctl_loaded": loaded,
         "launchctl_output": output,
         "notes": [
-            "The helper shows a menu-bar SA badge; allow file access once when macOS asks.",
+            "The helper shows a menu-bar SA badge; grant Files and Folders access for the registered repositories when macOS asks.",
             "It never pushes or changes repositories; uninstall with sync helper uninstall --confirm.",
         ],
     }

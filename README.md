@@ -612,4 +612,4 @@ For the recommended local checkout, worktree, installation and archive layout â€
 
 ## Status
 
-Skill Atlas is currently `0.15.0-beta`. Interfaces and platform adapters may change before the stable release.
+Skill Atlas is currently `0.15.1-beta`. Interfaces and platform adapters may change before the stable release.

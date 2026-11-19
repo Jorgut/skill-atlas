@@ -20,9 +20,15 @@ struct SyncItem: Decodable {
     let warnings: [String]
 }
 
+struct SkippedItem: Decodable {
+    let project: String
+    let reason: String
+}
+
 struct SyncResult: Decodable {
     let status: String
     let notified: [SyncItem]
+    let skipped: [SkippedItem]?
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -30,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var timer: Timer?
     private var config: HelperConfig?
     private var items: [SyncItem] = []
+    private var skippedItems: [SkippedItem] = []
     private var lastError: String?
     private var refreshing = false
 
@@ -97,12 +104,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if proc.terminationStatus != 0 {
                     self.lastError = String(data: err, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "sync notify failed"
                     self.items = []
+                    self.skippedItems = []
                 } else if let result = try? JSONDecoder().decode(SyncResult.self, from: out) {
                     self.items = result.notified
+                    self.skippedItems = result.skipped ?? []
                     self.lastError = nil
                 } else {
                     self.lastError = "Could not decode sync notify output"
                     self.items = []
+                    self.skippedItems = []
                 }
                 self.render()
             }
@@ -118,8 +128,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func render() {
         let count = items.count
-        statusItem.button?.title = count > 0 ? "SA \(count)" : (lastError == nil ? "SA" : "SA !")
-        statusItem.button?.toolTip = count > 0 ? "\(count) repository/worktree issue(s)" : (lastError ?? "Skill Atlas: all clean")
+        let unreadable = lastError != nil || !skippedItems.isEmpty
+        statusItem.button?.title = count > 0 ? "SA \(count)" : (unreadable ? "SA !" : "SA")
+        statusItem.button?.toolTip = count > 0
+            ? "\(count) repository/worktree issue(s)"
+            : (lastError ?? (skippedItems.isEmpty ? "Skill Atlas: all clean" : "\(skippedItems.count) project(s) need file access"))
         let menu = NSMenu()
         menu.autoenablesItems = false
         let title = NSMenuItem(title: "Skill Atlas Sync Monitor", action: nil, keyEquivalent: "")
@@ -150,6 +163,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 menu.addItem(entry)
             }
         }
+        if !skippedItems.isEmpty {
+            menu.addItem(NSMenuItem.separator())
+            for skipped in skippedItems {
+                let entry = NSMenuItem(title: "Cannot read \(URL(fileURLWithPath: skipped.project).lastPathComponent): \(skipped.reason)", action: nil, keyEquivalent: "")
+                entry.isEnabled = false
+                menu.addItem(entry)
+            }
+            let privacy = NSMenuItem(title: "Open Privacy settings…", action: #selector(openPrivacy), keyEquivalent: "")
+            privacy.target = self
+            menu.addItem(privacy)
+        }
         menu.addItem(NSMenuItem.separator())
         let refreshItem = NSMenuItem(title: "Refresh now", action: #selector(refreshNow), keyEquivalent: "r")
         refreshItem.target = self
@@ -166,6 +190,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func refreshNow() {
         refresh()
+    }
+
+    @objc private func openPrivacy() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     @objc private func openRegistry() {
