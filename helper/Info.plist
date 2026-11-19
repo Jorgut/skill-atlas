@@ -10,4 +10,6 @@
 <key>CFBundleVersion</key><string>1</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>LSUIElement</key><true/>
+<key>NSDocumentsFolderUsageDescription</key><string>Skill Atlas Notify reads local Git status for the repositories you registered.</string>
+<key>NSDesktopFolderUsageDescription</key><string>Skill Atlas Notify reads local Git status for the repositories you registered.</string>
 </dict></plist>

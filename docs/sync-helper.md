@@ -211,6 +211,15 @@ command returns `{status, app, config, plist}`. Uninstall preview returns
   it is still a local UI helper, not an agent or push service. It never
   auto-pushes.
 
+## Permission error state
+
+If a registered repository lives under `Documents`, `Desktop` or another
+protected folder and macOS denies access, the helper does not pretend
+everything is clean. It shows `SA !`, lists `Cannot read <project>: ...`,
+and offers **Open Privacy settings…** (`Privacy & Security → Files and
+Folders`). The first launch normally shows an **Allow** prompt for the
+same reason. Grant access to *Skill Atlas Notify*, then use **Refresh now**.
+
 ## Limitations
 
 - **Unsigned/ad-hoc local build.** The app is built locally and ad-hoc signed
