@@ -217,7 +217,7 @@ bar and Dock in full-screen apps. The helper therefore adds two fallbacks:
   corner. The panel is non-activating, joins all Spaces and uses
   `fullScreenAuxiliary`, so it remains visible over full-screen Chrome/Figma.
 
-Click the floating badge (or a Dock icon) to see the issue summary. When clean,
+The floating badge is a clickable, high-contrast button; click it (or the Dock icon) to see the issue summary. When clean,
 the floating badge is hidden and the Dock icon returns to accessory mode.
 If you do not want the floating badge, quit the helper; the menu-bar item and
 LaunchAgent remain unchanged.
