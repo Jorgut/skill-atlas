@@ -68,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupFloatingPanel() {
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 250, height: 48),
-            styleMask: [.borderless, .nonactivatingPanel],
+            styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
@@ -78,20 +78,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.hidesOnDeactivate = false
-        let effect = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 250, height: 48))
-        effect.material = .hudWindow
-        effect.blendingMode = .behindWindow
-        effect.state = .active
-        effect.wantsLayer = true
-        effect.layer?.cornerRadius = 14
-        effect.layer?.masksToBounds = true
+        panel.isMovableByWindowBackground = true
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 250, height: 48))
+        container.wantsLayer = true
+        container.layer?.backgroundColor = NSColor(calibratedRed: 0.04, green: 0.24, blue: 0.31, alpha: 0.96).cgColor
+        container.layer?.cornerRadius = 14
+        container.layer?.masksToBounds = true
         let button = NSButton(title: "Skill Atlas", target: self, action: #selector(showSummaryAction))
-        button.frame = NSRect(x: 10, y: 8, width: 230, height: 32)
+        button.frame = NSRect(x: 10, y: 6, width: 230, height: 36)
         button.isBordered = false
         button.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
         button.contentTintColor = .white
-        effect.addSubview(button)
-        panel.contentView = effect
+        button.alignment = .center
+        container.addSubview(button)
+        panel.contentView = container
         floatingPanel = panel
         floatingButton = button
         positionFloatingPanel()
