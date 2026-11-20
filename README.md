@@ -611,6 +611,8 @@ See [`SKILL.md`](SKILL.md) for the complete agent workflow, ownership rules, dis
 
 For the recommended local checkout, worktree, installation and archive layout — and the same rules for every agent tool — see [Installation and Development Layout](docs/development-layout.md).
 
+The next iteration is scoped in [Evidence-Driven Agent Workflows](docs/roadmap-evidence-driven-workflows.md): a verified baseline, the gap analysis behind it, the dependency graph, and the pull-request plan. It is a plan, not a description of shipped behavior.
+
 ## Status
 
 Skill Atlas is currently `0.16.0-beta`. Interfaces and platform adapters may change before the stable release.
