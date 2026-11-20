@@ -7,6 +7,7 @@ struct HelperConfig: Decodable {
     let state: String
     let log: String
     let interval: Double
+    let dirty_min_files: Int?
 }
 
 struct SyncItem: Decodable {
@@ -82,7 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refreshing = true
         let process = Process()
         process.executableURL = URL(fileURLWithPath: config.python)
-        process.arguments = [
+        var arguments = [
             config.cli, "sync", "notify",
             "--registry", config.registry,
             "--channel", "json",
@@ -91,6 +92,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "--state", config.state,
             "--log", config.log,
         ]
+        if let dirtyMin = config.dirty_min_files {
+            arguments += ["--include-dirty", "--dirty-min-files", String(dirtyMin)]
+        }
+        process.arguments = arguments
         let pipe = Pipe()
         let errPipe = Pipe()
         process.standardOutput = pipe

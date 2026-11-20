@@ -955,6 +955,32 @@ def handle_disk(args: argparse.Namespace) -> None:
         disk_scan.emit_markdown(result)
 
 
+def handle_sync_summary(args: argparse.Namespace) -> None:
+    try:
+        result = agent_handoff.sync_summary(args.project, dirty_threshold=args.dirty_min_files)
+    except agent_handoff.HandoffError as exc:
+        print(f"Skill Atlas sync summary refused: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    if args.format == "json":
+        json_print(result)
+        return
+    print("# Project sync summary")
+    print(f"- project: `{result['project']}`")
+    print(f"- summary: {result['summary']}")
+    print(f"- commit suggested: {result['commit_suggested']}")
+    print(f"- checkpoint suggested: {result['checkpoint_suggested']}")
+    for action in result["actions"]:
+        print(f"- action: {action}")
+    print(f"- note: {result['notes'][0]}")
+
+
+def add_sync_summary_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--project", default=".")
+    parser.add_argument("--dirty-min-files", type=int, default=20,
+                        help="Suggest a commit at or above this many dirty files (default 20).")
+    parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+
+
 def handle_sync(args: argparse.Namespace) -> None:
     if args.action == "notify":
         try:
@@ -1018,6 +1044,11 @@ def add_sync_commands(subparsers: argparse._SubParsersAction) -> None:
     )
     agent_handoff.add_sync_arguments(status)
     status.set_defaults(handler=handle_sync)
+    summary = actions.add_parser(
+        "summary", help="Print a compact project-state summary for end-of-block/commit reminders."
+    )
+    add_sync_summary_arguments(summary)
+    summary.set_defaults(handler=handle_sync_summary)
     setup = actions.add_parser(
         "setup", help="Install the optional macOS notification LaunchAgent for chosen repositories."
     )

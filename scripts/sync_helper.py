@@ -83,6 +83,7 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
     p = paths(home)
     confirm = bool(getattr(args, "confirm", False))
     interval = max(60, int(getattr(args, "interval", 900)))
+    dirty_min_files = max(1, int(getattr(args, "dirty_min_files", 20)))
     if not confirm:
         return {
             "status": "preview",
@@ -90,6 +91,7 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
             "config": str(p["config"]),
             "plist": str(p["plist"]),
             "interval_seconds": interval,
+            "dirty_min_files": dirty_min_files,
             "notes": [
                 "Preview only. Re-run with --confirm to build/install the helper and its login item.",
                 "The helper needs one-time macOS file access permission for the registered repositories.",
@@ -114,6 +116,7 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
         "state": str(p["state"]),
         "log": str(p["log"]),
         "interval": interval,
+        "dirty_min_files": dirty_min_files,
     }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     p["plist"].parent.mkdir(parents=True, exist_ok=True)
     p["plist"].write_bytes(plistlib.dumps(_plist(p["app"]), fmt=plistlib.FMT_XML))
@@ -167,6 +170,8 @@ def status(args: argparse.Namespace) -> dict[str, Any]:
 def add_install_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--confirm", action="store_true", help="Build and install the helper and login item.")
     parser.add_argument("--interval", type=int, default=900, help="Poll interval in seconds (default 900).")
+    parser.add_argument("--dirty-min-files", type=int, default=20,
+                        help="Show a dirty-worktree warning at or above this file count (default 20).")
     parser.add_argument("--no-open", action="store_true", help="Do not launch the helper after install.")
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
     parser.add_argument("--home", default=None, help=argparse.SUPPRESS)

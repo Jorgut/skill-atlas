@@ -139,6 +139,52 @@ def sync_status(root: Path) -> dict[str, Any]:
     }
 
 
+def sync_summary(project: str | Path, *, dirty_threshold: int = 20) -> dict[str, Any]:
+    """Compact project-state summary for end-of-block/handoff reminders."""
+    root = repo_root(Path(project))
+    status = sync_status(root)
+    dirty_threshold = max(1, int(dirty_threshold))
+    actions: list[str] = []
+    if status["detached"]:
+        actions.append("Create or switch back to a branch before continuing.")
+    if not status["has_upstream"]:
+        actions.append("This branch has no upstream; push it after review or create one.")
+    if status["ahead"]:
+        actions.append(f"Push {status['ahead']} local commit(s) after review.")
+    if status["behind"]:
+        actions.append(f"Fetch/rebase or merge; the remote-tracking branch is {status['behind']} commit(s) ahead.")
+    if status["dirty"]:
+        actions.append(f"Review and commit/checkpoint {status['dirty']} uncommitted change(s).")
+    commit_suggested = status["dirty"] >= dirty_threshold
+    checkpoint_suggested = bool(status["dirty"] or status["ahead"] or not status["has_upstream"] or status["behind"] or status["detached"])
+    if not actions:
+        actions.append("Working tree and branch are clean.")
+    summary = (
+        f"{root.name} · {status['branch']}: "
+        f"{status['dirty']} dirty, {status['ahead']} ahead, {status['behind']} behind, "
+        f"upstream={'yes' if status['has_upstream'] else 'no'}"
+    )
+    return {
+        "status": "ok",
+        "project": str(root),
+        "summary": summary,
+        "branch": status["branch"],
+        "upstream": status["upstream"],
+        "has_upstream": status["has_upstream"],
+        "ahead": status["ahead"],
+        "behind": status["behind"],
+        "dirty": status["dirty"],
+        "detached": status["detached"],
+        "last_commit": status["last_commit"],
+        "commit": status["commit"],
+        "dirty_threshold": dirty_threshold,
+        "commit_suggested": commit_suggested,
+        "checkpoint_suggested": checkpoint_suggested,
+        "actions": actions,
+        "notes": ["Read-only summary; no commit, push, fetch or branch change was made."],
+    }
+
+
 def sync_report(args: argparse.Namespace) -> dict[str, Any]:
     root = repo_root(args.project)
     status = sync_status(root)
@@ -286,6 +332,7 @@ def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
     channel = getattr(args, "channel", "macos")
     min_interval = max(0.0, float(getattr(args, "min_interval", 60)))
     include_dirty = bool(getattr(args, "include_dirty", False))
+    dirty_min_files = max(1, int(getattr(args, "dirty_min_files", 1)))
     do_fetch = bool(getattr(args, "fetch", False))
     idle_minutes = max(0.0, float(getattr(args, "idle_minutes", 0)))
     force_after_minutes = max(0.0, float(getattr(args, "force_after_minutes", 0)))
@@ -359,7 +406,7 @@ def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
                 warnings.append(f"{status['ahead']} unpushed commit(s)")
             if status["behind"]:
                 warnings.append(f"behind remote by {status['behind']} commit(s)")
-            if include_dirty and status["dirty"]:
+            if include_dirty and status["dirty"] >= dirty_min_files:
                 warnings.append(f"{status['dirty']} uncommitted change(s)")
             if not warnings:
                 state.pop(key_path, None)
@@ -431,6 +478,7 @@ def sync_notify(args: argparse.Namespace) -> dict[str, Any]:
         "log_file": str(log_path),
         "idle_minutes": idle_minutes,
         "force_after_minutes": force_after_minutes,
+        "dirty_min_files": dirty_min_files,
         "fetch": do_fetch,
         "notes": "Read-only Git checks; notifications only, never push/commit/fetch unless --fetch was supplied",
     }
@@ -551,6 +599,8 @@ def add_notify_arguments(parser: argparse.ArgumentParser) -> None:
                         help="Seconds allowed per repository fetch (default 10).")
     parser.add_argument("--include-dirty", action="store_true",
                         help="Also notify for uncommitted changes; off by default.")
+    parser.add_argument("--dirty-min-files", type=int, default=1,
+                        help="Only include dirty warnings at or above this file count (default 1).")
     parser.add_argument("--idle-minutes", type=float, default=0,
                         help="Suppress notifications while the worktree changed within this many minutes (default 0 = off).")
     parser.add_argument("--force-after-minutes", type=float, default=0,

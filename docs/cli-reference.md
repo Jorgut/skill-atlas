@@ -207,6 +207,28 @@ each warning, and the read-only note. JSON returns
 commits, rebases, switches branches, opens a network connection, or starts an agent. Because no fetch
 is performed, `ahead`/`behind` reflect local tracking refs and may be stale.
 
+### `sync summary`
+
+`sync summary` prints a compact, read-only end-of-block/handoff summary for one
+project: branch, dirty/ahead/behind/upstream state, `commit_suggested`,
+`checkpoint_suggested`, and next actions. It never commits, pushes, or fetches.
+
+```bash
+python3 <skill-root>/scripts/skill_atlas.py sync summary --project .
+python3 <skill-root>/scripts/skill_atlas.py sync summary --project . --dirty-min-files 20
+python3 <skill-root>/scripts/skill_atlas.py sync summary --project . --format json
+```
+
+Flags: `--project PATH` (default `.`); `--dirty-min-files N` (default 20; values
+below 1 are raised to 1); `--format markdown|json`. `commit_suggested` is true
+when `dirty >= dirty_min_files`; `checkpoint_suggested` is true for any dirty,
+ahead, behind, no-upstream, or detached state. JSON returns `{status, project,
+summary, branch, upstream, has_upstream, ahead, behind, dirty, detached,
+last_commit, commit, dirty_threshold, commit_suggested, checkpoint_suggested,
+actions, notes}`. The dirty count is Git status entries (untracked included,
+`.agent-state/` excluded). See [Project Sync Summary](sync-summary.md) for the
+threshold guidance and limitations.
+
 ### `sync notify`
 
 `sync notify` is the opt-in batch notifier for one or more repositories and their
@@ -227,8 +249,10 @@ Flags: repeated `--project PATH`; `--registry PATH` (JSON list or an object with
 MINUTES` (default 60); `--state PATH` (default
 `~/.cache/skill-atlas/sync-notify.json`); `--fetch` (off by default; only updates
 remote-tracking refs); `--fetch-timeout SECONDS` (default 10); `--include-dirty`
-(off by default); `--idle-minutes MINUTES` (default 0 = off; suppress while the
-worktree had file/commit activity within the window); `--force-after-minutes
+(off by default); `--dirty-min-files N` (default 1; with `--include-dirty`, only
+include dirty warnings at or above this file count); `--idle-minutes MINUTES`
+(default 0 = off; suppress while the worktree had file/commit activity within the
+window); `--force-after-minutes
 MINUTES` (default 0 = off; send a digest of the same state after it persists this
 long while active; respects `--min-interval`); `--sound NAME` (macOS
 notification sound, default `Glass`; empty string disables); `--log PATH` (append
@@ -241,7 +265,7 @@ remote, and detached HEAD; dirty state is actionable only with
 
 `--channel json` returns `{status, channel, checked, notified, suppressed,
 skipped, fetch_errors, state_file, log_file, idle_minutes, force_after_minutes,
-fetch, notes}`.
+dirty_min_files, fetch, notes}`.
 `status` is `notified` when at least one worktree was newly actionable, otherwise
 `clean` (including when all actionable states were suppressed); a
 `--test-notification` run returns `status: "test-notification"` with empty lists,
@@ -308,12 +332,13 @@ python3 <skill-root>/scripts/skill_atlas.py sync helper uninstall --confirm
 `~/Applications/Skill Atlas Notify.app`, write
 `~/Library/Application Support/Skill Atlas/helper.json` and the login
 LaunchAgent `com.skill-atlas.notify-helper.plist`, load it, and open the app);
-`--interval SECONDS` (default 900; minimum 60); `--no-open` (do not launch after
-install); `--format markdown|json`. `uninstall` takes `--confirm` and `--format`.
+`--interval SECONDS` (default 900; minimum 60); `--dirty-min-files FILES`
+(default 20; show dirty worktrees in the menu at/above this count); `--no-open`
+(do not launch after install); `--format markdown|json`. `uninstall` takes `--confirm` and `--format`.
 `status` takes `--format`.
 
 Preview output has `status: "preview"`, `app`, `config`, `plist`,
-`interval_seconds`, and `notes`. Installed output adds `launchctl_loaded` and
+`interval_seconds`, `dirty_min_files`, and `notes`. Installed output adds `launchctl_loaded` and
 `launchctl_output`; `status` is `installed` when bootstrap succeeds, otherwise
 `error` (files are already written). `status` reports `installed` or
 `not-installed` from the app path; uninstall preview returns app/plist/config

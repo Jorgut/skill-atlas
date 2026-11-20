@@ -1,7 +1,9 @@
 # Menu-Bar Sync Helper
 
 `sync helper` manages an optional macOS menu-bar app that shows the current
-Git-sync state for your registered repositories. It was added in `0.15.0-beta`.
+Git-sync state for your registered repositories. It was added in `0.15.0-beta`;
+`0.16.0-beta` adds a dirty-file threshold so the badge reflects accumulating
+uncommitted work without counting every small edit.
 
 The helper exists because notifications can be blocked, muted, or shown as
 "Script Editor" banners. A menu-bar item is visible without notification
@@ -19,8 +21,9 @@ merges, or changes a repository.
 It **is**:
 
 - a small AppKit menu-bar app built locally from `helper/` with `swiftc`;
-- a login item that launches the app, which polls `sync notify --channel json`
-  every 15 minutes by default and renders the result;
+- a login item that launches the app, which polls
+  `sync notify --channel json --include-dirty --dirty-min-files N` every 15
+  minutes by default and renders the result;
 - an alternative to OS notifications when banners are unavailable or
   unreliable;
 - installed with a preview-first command and removed with a matching uninstall
@@ -81,6 +84,10 @@ Useful variants:
 python3 <skill-root>/scripts/skill_atlas.py sync helper install --confirm \
   --interval 1800 --no-open
 
+# Count dirty work in the badge only after 5 files (default is 20).
+python3 <skill-root>/scripts/skill_atlas.py sync helper install --confirm \
+  --dirty-min-files 5
+
 # Check installation, or preview uninstall.
 python3 <skill-root>/scripts/skill_atlas.py sync helper status
 python3 <skill-root>/scripts/skill_atlas.py sync helper uninstall
@@ -95,6 +102,7 @@ python3 <skill-root>/scripts/skill_atlas.py sync helper uninstall --confirm
 |---|---|
 | `--confirm` | Build the app, copy it to `~/Applications`, write config and the login item, load it, and optionally open it. Without this flag the command only previews. |
 | `--interval SECONDS` | Poll interval for the helper (default 900 = 15 minutes; values below 60 are raised to 60). |
+| `--dirty-min-files FILES` | Include dirty worktrees in the menu only when the dirty count reaches this number (default 20; values below 1 are raised to 1). |
 | `--no-open` | Do not launch the helper immediately after installing. The login item is still written. |
 | `--format markdown\|json` | Output format (default `markdown`). |
 
@@ -111,7 +119,7 @@ the result is `status: "error"` (the CLI itself exits 0).
 | Path | Purpose |
 |---|---|
 | `~/Applications/Skill Atlas Notify.app` | The built menu-bar app (ad-hoc codesigned by the build script) |
-| `~/Library/Application Support/Skill Atlas/helper.json` | Helper config: Python path, CLI path, registry/state/log paths, poll interval |
+| `~/Library/Application Support/Skill Atlas/helper.json` | Helper config: Python path, CLI path, registry/state/log paths, poll interval, dirty threshold |
 | `~/Library/LaunchAgents/com.skill-atlas.notify-helper.plist` | Login item that opens the app with `/usr/bin/open -a` at login |
 
 The config points at:
@@ -119,6 +127,7 @@ The config points at:
 - registry: `~/.config/skill-atlas/watch.json`
 - state: `~/.cache/skill-atlas/helper-state.json`
 - log: `~/.cache/skill-atlas/helper.log`
+- dirty threshold: `dirty_min_files` (default 20)
 
 The helper does not create the registry. If the registry is missing or invalid,
 refreshes fail and the menu shows an error (`SA !`); create the registry with
@@ -146,6 +155,25 @@ over the screen. Its menu is built from `sync notify --channel json`:
   **Open in Finder**;
 - **Refresh now** (`r`), **Open registry** (`o`), and **Quit** (`q`).
 
+### Dirty threshold
+
+The helper runs `sync notify --include-dirty --dirty-min-files N` using the
+`dirty_min_files` value from its config (default 20). A worktree whose only
+issue is uncommitted work appears in the menu — and counts toward `SA N` — only
+once its dirty count reaches the threshold. Other warnings (unpushed commits,
+no upstream, behind, detached HEAD) are not threshold-filtered.
+
+This makes the badge a signal for *accumulating* work rather than every
+in-progress edit. The helper still polls with `--min-interval 0
+--idle-minutes 0`, so the menu reflects current state immediately; the
+threshold is the deliberate limiter. If the helper was installed before
+`0.16.0-beta`, its config may not contain `dirty_min_files` (the field is
+optional for compatibility); reinstall with `sync helper install --confirm` to
+add the threshold. OS notifications are separate: the
+`sync setup` LaunchAgent is governed by its idle, force-after, and minimum
+interval settings, while the helper displays state without notification
+permission.
+
 The helper invokes `sync notify` with `--min-interval 0 --idle-minutes 0` so the
 badge reflects current state instead of notification suppression. It does not
 pass `--fetch`, so every refresh is offline; the helper never opens a network
@@ -155,7 +183,8 @@ connection by itself.
 
 The menu-bar helper is not a notification. It does not request notification
 permission, does not post banners, and does not depend on Notification Center or
-Focus settings. It only displays state in the menu bar.
+Focus settings. It only displays state in the menu bar. Its dirty threshold
+controls the menu badge, not OS notification behavior.
 
 It never pushes, fetches, commits, merges, or deletes anything. **Open in
 Terminal/Finder** and **Open registry** are user-initiated UI actions; the helper
@@ -191,6 +220,7 @@ Install preview:
 | `status` | `preview` |
 | `app`, `config`, `plist` | Paths that would be written |
 | `interval_seconds` | Poll interval that would be configured |
+| `dirty_min_files` | Dirty threshold that would be configured |
 | `notes` | Preview and file-access reminders |
 
 Install result adds `launchctl_loaded` and `launchctl_output`; `status` is
@@ -207,6 +237,8 @@ command returns `{status, app, config, plist}`. Uninstall preview returns
   the shared `watch.json` registry. The helper reads that registry and does not
   install the notification job.
 - [`sync status`](cli-reference.md) is the manual, one-off check.
+- [`sync summary`](sync-summary.md) is the compact end-of-block summary; it also
+  defaults its `commit_suggested` threshold to 20 dirty files.
 - The helper adds a persistent menu-bar surface without notification permission;
   it is still a local UI helper, not an agent or push service. It never
   auto-pushes.
@@ -243,5 +275,9 @@ same reason. Grant access to *Skill Atlas Notify*, then use **Refresh now**.
 - **Log growth.** Each actionable refresh can append to
   `~/.cache/skill-atlas/helper.log`; clean refreshes write nothing. Remove or
   rotate the log if it grows.
+- **Dirty threshold is a heuristic.** The default 20 counts dirty Git entries
+  (including untracked files), not changed lines or risk. Lower it for small
+  projects; raise it if generated files inflate the count. It filters only dirty
+  work in the menu, not other warnings.
 - **No notification guarantee.** This is a menu-bar indicator, not a banner; it
   cannot wake you, interrupt Focus, or guarantee attention.
