@@ -110,11 +110,7 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
         shutil.rmtree(build_dir, ignore_errors=True)
     p["config"].parent.mkdir(parents=True, exist_ok=True)
     p["config"].write_text(json.dumps({
-        "python": str(Path(sys.executable).resolve()),
-        "cli": str(ROOT / "scripts" / "skill_atlas.py"),
         "registry": str(p["registry"]),
-        "state": str(p["state"]),
-        "log": str(p["log"]),
         "interval": interval,
         "dirty_min_files": dirty_min_files,
     }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -132,7 +128,7 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
         "launchctl_loaded": loaded,
         "launchctl_output": output,
         "notes": [
-            "The helper shows a menu-bar SA badge; grant Files and Folders access for the registered repositories when macOS asks.",
+            "The helper shows a menu-bar SA badge. If macOS does not show a file-access prompt, add the app under Privacy & Security → Full Disk Access, then relaunch.",
             "It never pushes or changes repositories; uninstall with sync helper uninstall --confirm.",
         ],
     }

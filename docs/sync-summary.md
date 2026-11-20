@@ -119,7 +119,7 @@ defaults on purpose:
 | `sync notify --include-dirty --dirty-min-files` | 1 | Whether a dirty-only notification appears |
 | `sync helper install --dirty-min-files` | 20 | Whether the menu-bar badge includes dirty work |
 
-The helper passes its threshold to `sync notify --include-dirty`, so it shows a
+The helper uses the same dirty threshold in its native Git check, so it shows a
 dirty warning only once the count reaches the configured number; OS
 notifications from `sync setup` are separate and remain governed by the
 notification job's idle/force-after/min-interval settings.

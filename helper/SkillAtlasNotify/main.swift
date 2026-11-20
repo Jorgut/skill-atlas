@@ -1,19 +1,19 @@
 import Cocoa
 
 struct HelperConfig: Decodable {
-    let python: String
-    let cli: String
     let registry: String
-    let state: String
-    let log: String
-    let interval: Double
+    let interval: Double?
     let dirty_min_files: Int?
 }
 
-struct SyncItem: Decodable {
+struct Registry: Decodable {
+    let projects: [String]
+}
+
+struct SyncItem {
     let path: String
     let branch: String
-    let has_upstream: Bool
+    let hasUpstream: Bool
     let ahead: Int
     let behind: Int
     let dirty: Int
@@ -21,15 +21,9 @@ struct SyncItem: Decodable {
     let warnings: [String]
 }
 
-struct SkippedItem: Decodable {
+struct SkippedItem {
     let project: String
     let reason: String
-}
-
-struct SyncResult: Decodable {
-    let status: String
-    let notified: [SyncItem]
-    let skipped: [SkippedItem]?
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -40,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var skippedItems: [SkippedItem] = []
     private var lastError: String?
     private var refreshing = false
+    private var promptedForAccess = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -47,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.title = "SA"
         statusItem.button?.toolTip = "Skill Atlas sync monitor"
         statusItem.menu = NSMenu()
+        NSApp.activate(ignoringOtherApps: true)
         loadConfig()
         refresh()
         schedule()
@@ -74,60 +70,107 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func refresh() {
-        guard !refreshing else { return }
-        guard let config = config else {
-            render()
-            return
-        }
-        refreshing = true
+    private func git(_ project: String, _ arguments: [String]) -> (Int32, String) {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: config.python)
-        var arguments = [
-            config.cli, "sync", "notify",
-            "--registry", config.registry,
-            "--channel", "json",
-            "--min-interval", "0",
-            "--idle-minutes", "0",
-            "--state", config.state,
-            "--log", config.log,
-        ]
-        if let dirtyMin = config.dirty_min_files {
-            arguments += ["--include-dirty", "--dirty-min-files", String(dirtyMin)]
-        }
-        process.arguments = arguments
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = ["-C", project] + arguments
         let pipe = Pipe()
-        let errPipe = Pipe()
+        let err = Pipe()
         process.standardOutput = pipe
-        process.standardError = errPipe
-        process.terminationHandler = { [weak self] proc in
-            let out = pipe.fileHandleForReading.readDataToEndOfFile()
-            let err = errPipe.fileHandleForReading.readDataToEndOfFile()
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.refreshing = false
-                if proc.terminationStatus != 0 {
-                    self.lastError = String(data: err, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "sync notify failed"
-                    self.items = []
-                    self.skippedItems = []
-                } else if let result = try? JSONDecoder().decode(SyncResult.self, from: out) {
-                    self.items = result.notified
-                    self.skippedItems = result.skipped ?? []
-                    self.lastError = nil
-                } else {
-                    self.lastError = "Could not decode sync notify output"
-                    self.items = []
-                    self.skippedItems = []
-                }
-                self.render()
-            }
-        }
+        process.standardError = err
         do {
             try process.run()
         } catch {
-            refreshing = false
-            lastError = error.localizedDescription
-            render()
+            return (127, error.localizedDescription)
+        }
+        process.waitUntilExit()
+        let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let errOut = String(data: err.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        return (process.terminationStatus, out.isEmpty ? errOut : out)
+    }
+
+    private func worktrees(_ project: String) -> (paths: [String], error: String?) {
+        let (code, output) = git(project, ["worktree", "list", "--porcelain"])
+        guard code == 0 else { return ([], output.trimmingCharacters(in: .whitespacesAndNewlines)) }
+        let paths = output.split(separator: "\n").compactMap { line -> String? in
+            guard line.hasPrefix("worktree ") else { return nil }
+            return String(line.dropFirst("worktree ".count))
+        }
+        return (paths.isEmpty ? [project] : paths, nil)
+    }
+
+    private func status(_ path: String) -> SyncItem? {
+        let branchResult = git(path, ["symbolic-ref", "--short", "HEAD"])
+        let detached = branchResult.0 != 0
+        let branch = detached ? "DETACHED" : branchResult.1.trimmingCharacters(in: .whitespacesAndNewlines)
+        let upstreamResult = git(path, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
+        let hasUpstream = upstreamResult.0 == 0
+        var ahead = 0
+        var behind = 0
+        if hasUpstream {
+            let upstream = upstreamResult.1.trimmingCharacters(in: .whitespacesAndNewlines)
+            let counts = git(path, ["rev-list", "--left-right", "--count", "\(upstream)...HEAD"])
+            if counts.0 == 0 {
+                let parts = counts.1.split(whereSeparator: { $0.isWhitespace })
+                if parts.count == 2 {
+                    behind = Int(parts[0]) ?? 0
+                    ahead = Int(parts[1]) ?? 0
+                }
+            }
+        }
+        let statusResult = git(path, ["status", "--porcelain=v1", "--untracked-files=all"])
+        let dirty = statusResult.0 == 0 ? statusResult.1.split(separator: "\n").filter { line in
+            !line.hasPrefix("?? .agent-state/") && !line.hasPrefix(" M .agent-state/")
+        }.count : 0
+        let threshold = max(1, config?.dirty_min_files ?? 20)
+        var warnings: [String] = []
+        if detached { warnings.append("detached HEAD") }
+        if !hasUpstream { warnings.append("no upstream") }
+        if ahead > 0 { warnings.append("\(ahead) unpushed commit(s)") }
+        if behind > 0 { warnings.append("behind remote by \(behind) commit(s)") }
+        if dirty >= threshold { warnings.append("\(dirty) uncommitted change(s)") }
+        guard !warnings.isEmpty else { return nil }
+        return SyncItem(path: path, branch: branch, hasUpstream: hasUpstream,
+                        ahead: ahead, behind: behind, dirty: dirty,
+                        detached: detached, warnings: warnings)
+    }
+
+    private func collect() -> ([SyncItem], [SkippedItem], String?) {
+        guard let config = config else { return ([], [], lastError) }
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: config.registry))
+            let registry = try JSONDecoder().decode(Registry.self, from: data)
+            var found: [SyncItem] = []
+            var skipped: [SkippedItem] = []
+            for project in registry.projects {
+                let wt = worktrees(project)
+                if let error = wt.error {
+                    skipped.append(SkippedItem(project: project, reason: error))
+                    continue
+                }
+                for path in wt.paths {
+                    if let item = status(path) { found.append(item) }
+                }
+            }
+            return (found, skipped, nil)
+        } catch {
+            return ([], [], "Cannot read registry: \(error.localizedDescription)")
+        }
+    }
+
+    private func refresh() {
+        guard !refreshing else { return }
+        refreshing = true
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self else { return }
+            let result = self.collect()
+            DispatchQueue.main.async {
+                self.items = result.0
+                self.skippedItems = result.1
+                self.lastError = result.2
+                self.refreshing = false
+                self.render()
+            }
         }
     }
 
@@ -144,28 +187,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         title.isEnabled = false
         menu.addItem(title)
         if let error = lastError {
-            let item = NSMenuItem(title: "Error: \(error)", action: nil, keyEquivalent: "")
+            let item = NSMenuItem(title: error, action: nil, keyEquivalent: "")
             item.isEnabled = false
             menu.addItem(item)
-        } else if items.isEmpty {
+        }
+        for item in items {
+            let label = "\(URL(fileURLWithPath: item.path).lastPathComponent) · \(item.branch): \(item.warnings.joined(separator: ", "))"
+            let entry = NSMenuItem(title: label, action: nil, keyEquivalent: "")
+            let submenu = NSMenu()
+            let openTerminal = NSMenuItem(title: "Open in Terminal", action: #selector(openInTerminal(_:)), keyEquivalent: "")
+            openTerminal.target = self
+            openTerminal.representedObject = item.path
+            submenu.addItem(openTerminal)
+            let openFinder = NSMenuItem(title: "Open in Finder", action: #selector(openInFinder(_:)), keyEquivalent: "")
+            openFinder.target = self
+            openFinder.representedObject = item.path
+            submenu.addItem(openFinder)
+            entry.submenu = submenu
+            menu.addItem(entry)
+        }
+        if items.isEmpty && lastError == nil && skippedItems.isEmpty {
             let item = NSMenuItem(title: "All clean", action: nil, keyEquivalent: "")
             item.isEnabled = false
             menu.addItem(item)
-        } else {
-            for item in items {
-                let label = "\(URL(fileURLWithPath: item.path).lastPathComponent) · \(item.branch): \(item.warnings.joined(separator: ", "))"
-                let entry = NSMenuItem(title: label, action: nil, keyEquivalent: "")
-                let submenu = NSMenu()
-                let openTerminal = NSMenuItem(title: "Open in Terminal", action: #selector(openInTerminal(_:)), keyEquivalent: "")
-                openTerminal.target = self
-                openTerminal.representedObject = item.path
-                submenu.addItem(openTerminal)
-                let openFinder = NSMenuItem(title: "Open in Finder", action: #selector(openInFinder(_:)), keyEquivalent: "")
-                openFinder.target = self
-                openFinder.representedObject = item.path
-                submenu.addItem(openFinder)
-                entry.submenu = submenu
-                menu.addItem(entry)
+        }
+        if !skippedItems.isEmpty && !promptedForAccess {
+            promptedForAccess = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+                self?.grantFileAccess()
             }
         }
         if !skippedItems.isEmpty {
@@ -179,6 +228,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             privacy.target = self
             menu.addItem(privacy)
         }
+        let grantItem = NSMenuItem(title: "Grant file access…", action: #selector(grantAccess), keyEquivalent: "g")
+        grantItem.target = self
+        menu.addItem(grantItem)
         menu.addItem(NSMenuItem.separator())
         let refreshItem = NSMenuItem(title: "Refresh now", action: #selector(refreshNow), keyEquivalent: "r")
         refreshItem.target = self
@@ -193,9 +245,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
     }
 
-    @objc private func refreshNow() {
-        refresh()
+    @objc private func grantAccess() { grantFileAccess() }
+
+    private func grantFileAccess() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = true
+        panel.message = "Choose the folder(s) that contain your registered repositories (for example Documents)."
+        panel.prompt = "Allow"
+        if panel.runModal() == .OK {
+            refresh()
+        }
     }
+
+    @objc private func refreshNow() { refresh() }
 
     @objc private func openPrivacy() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders") {
@@ -221,9 +285,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.open(URL(fileURLWithPath: path))
     }
 
-    @objc private func quit() {
-        NSApp.terminate(nil)
-    }
+    @objc private func quit() { NSApp.terminate(nil) }
 }
 
 let app = NSApplication.shared

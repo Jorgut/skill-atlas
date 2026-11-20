@@ -318,7 +318,9 @@ notification permissions.
 
 `sync helper` installs or removes the optional macOS menu-bar sync helper. It is
 preview-first, explicit, macOS-only for install/uninstall, and never pushes,
-fetches, commits, or changes a repository.
+fetches, commits, or changes a repository. Since `0.16.1-beta` the installed app
+reads Git directly with `/usr/bin/git`; it no longer spawns the Python CLI, and
+its config has no Python/CLI paths.
 
 ```bash
 python3 <skill-root>/scripts/skill_atlas.py sync helper install
@@ -330,8 +332,9 @@ python3 <skill-root>/scripts/skill_atlas.py sync helper uninstall --confirm
 
 `install` flags: `--confirm` (build with `swiftc`, copy to
 `~/Applications/Skill Atlas Notify.app`, write
-`~/Library/Application Support/Skill Atlas/helper.json` and the login
-LaunchAgent `com.skill-atlas.notify-helper.plist`, load it, and open the app);
+`~/Library/Application Support/Skill Atlas/helper.json` with registry/interval/
+dirty-threshold settings and the login LaunchAgent
+`com.skill-atlas.notify-helper.plist`, load it, and open the app);
 `--interval SECONDS` (default 900; minimum 60); `--dirty-min-files FILES`
 (default 20; show dirty worktrees in the menu at/above this count); `--no-open`
 (do not launch after install); `--format markdown|json`. `uninstall` takes `--confirm` and `--format`.
@@ -344,9 +347,13 @@ Preview output has `status: "preview"`, `app`, `config`, `plist`,
 `not-installed` from the app path; uninstall preview returns app/plist/config
 paths and confirmed removal returns `removed`. Installation needs Xcode
 command-line tools/`swiftc`, creates no backups, and expects the shared
-`~/.config/skill-atlas/watch.json` registry (created by `sync setup`). See
+`~/.config/skill-atlas/watch.json` registry (created by `sync setup`); the
+runtime app needs `/usr/bin/git` plus file access, not Python. The helper menu
+includes **Grant file access…**, and unsigned/background installs may need the
+manual System Settings → Privacy & Security → Full Disk Access (or Files and
+Folders) route because the macOS prompt may not appear. See
 [Menu-Bar Sync Helper](sync-helper.md) for requirements, menu behavior, file
-access, uninstall, and limitations.
+access troubleshooting, uninstall, and limitations.
 
 See [Installation and Development Layout](development-layout.md#push-before-you-hand-off-and-during-long-work)
 for recommended cadence, optional shell/scheduler/hook wiring, and the rule to never auto-push.
