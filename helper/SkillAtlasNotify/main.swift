@@ -117,8 +117,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             var lines = items.map { "\(URL(fileURLWithPath: $0.path).lastPathComponent) · \($0.branch): \($0.warnings.joined(separator: ", "))" }
             lines += skippedItems.map { "Cannot read \(URL(fileURLWithPath: $0.project).lastPathComponent): \($0.reason)" }
             alert.informativeText = lines.joined(separator: "\n")
+            if items.contains(where: { !$0.hasUpstream }) {
+                alert.informativeText += "\n\nno upstream means this branch has no remote tracking branch. Push with `git push -u` when ready."
+            }
         }
         alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Later")
+        alert.buttons[1].keyEquivalent = "\u{1b}"
         alert.runModal()
     }
 
