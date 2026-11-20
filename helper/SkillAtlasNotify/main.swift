@@ -37,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var promptedForAccess = false
     private var floatingPanel: NSPanel?
     private var floatingButton: NSButton?
+    private var summaryWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -108,23 +109,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showSummary() {
-        let alert = NSAlert()
+        if let existing = summaryWindow {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        var lines: [String] = []
         if items.isEmpty && skippedItems.isEmpty {
-            alert.messageText = "Skill Atlas: all clean"
-            alert.informativeText = "No unpushed commits or unreadable projects."
+            lines.append("No unpushed commits or unreadable projects.")
         } else {
-            alert.messageText = "Skill Atlas: \(items.count) issue(s)"
-            var lines = items.map { "\(URL(fileURLWithPath: $0.path).lastPathComponent) · \($0.branch): \($0.warnings.joined(separator: ", "))" }
+            lines += items.map { "\(URL(fileURLWithPath: $0.path).lastPathComponent) · \($0.branch): \($0.warnings.joined(separator: ", "))" }
             lines += skippedItems.map { "Cannot read \(URL(fileURLWithPath: $0.project).lastPathComponent): \($0.reason)" }
-            alert.informativeText = lines.joined(separator: "\n")
             if items.contains(where: { !$0.hasUpstream }) {
-                alert.informativeText += "\n\nno upstream means this branch has no remote tracking branch. Push with `git push -u` when ready."
+                lines.append("")
+                lines.append("no upstream means this branch has no remote tracking branch. Push with `git push -u` when ready.")
             }
         }
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Later")
-        alert.buttons[1].keyEquivalent = "\u{1b}"
-        alert.runModal()
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 260),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Skill Atlas"
+        window.isReleasedWhenClosed = false
+        window.level = .floating
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        let content = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 260))
+        let heading = NSTextField(labelWithString: items.isEmpty && skippedItems.isEmpty ? "All clean" : "Skill Atlas: \(items.count) issue(s)")
+        heading.frame = NSRect(x: 20, y: 220, width: 420, height: 22)
+        heading.font = NSFont.systemFont(ofSize: 15, weight: .semibold)
+        content.addSubview(heading)
+        let body = NSTextField(wrappingLabelWithString: lines.joined(separator: "\n"))
+        body.frame = NSRect(x: 20, y: 74, width: 420, height: 140)
+        body.font = NSFont.systemFont(ofSize: 12.5)
+        content.addSubview(body)
+        let close = NSButton(title: "Close", target: self, action: #selector(closeSummary))
+        close.frame = NSRect(x: 350, y: 20, width: 90, height: 30)
+        close.bezelStyle = .rounded
+        close.keyEquivalent = "\u{1b}"
+        content.addSubview(close)
+        window.contentView = content
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        summaryWindow = window
+    }
+
+    @objc private func closeSummary() {
+        summaryWindow?.orderOut(nil)
+        summaryWindow = nil
     }
 
     private func schedule() {
