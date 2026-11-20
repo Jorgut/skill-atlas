@@ -206,7 +206,23 @@ easy to think it is not running:
 - check Activity Monitor for `SkillAtlasNotify`;
 - the login item relaunches it at the next login.
 
-### Menu behavior
+### Visibility: menu bar, Dock and floating badge
+
+macOS hides menu-bar extras when the bar is crowded and hides both the menu
+bar and Dock in full-screen apps. The helper therefore adds two fallbacks:
+
+- when an issue exists it sets a Dock badge and temporarily becomes a regular
+  app, so the count is visible in the Dock;
+- it also shows a small floating `Skill Atlas · N` badge near the top-right
+  corner. The panel is non-activating, joins all Spaces and uses
+  `fullScreenAuxiliary`, so it remains visible over full-screen Chrome/Figma.
+
+Click the floating badge (or a Dock icon) to see the issue summary. When clean,
+the floating badge is hidden and the Dock icon returns to accessory mode.
+If you do not want the floating badge, quit the helper; the menu-bar item and
+LaunchAgent remain unchanged.
+
+## Menu behavior
 
 The helper is an accessory app: it has no Dock icon and does not take over the
 screen. Its menu contains:
