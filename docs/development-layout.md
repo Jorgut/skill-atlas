@@ -178,6 +178,14 @@ The command never fetches, pushes, commits, rebases, or changes a branch, and it
 connection. `ahead` and `behind` are computed from local tracking refs, which may be stale until you
 fetch yourself. Treat the warnings as prompts for a human decision, not as a blocked state.
 
+At the end of a work block, `sync summary --project .` condenses the same facts into a
+commit/checkpoint nudge: it reports branch, dirty/ahead/behind/upstream,
+`commit_suggested`, `checkpoint_suggested`, and next actions, and is read-only. Its
+`--dirty-min-files` threshold (default 20) keeps small in-progress edits from looking like a
+commit request; a checkpoint can still be suggested for any unpushed or dirty state. Use it at
+end-of-block/handoff rather than after every small edit. See
+[Project Sync Summary](sync-summary.md).
+
 Recommended checkpoints: when you save a checkpoint or handoff, at the end of a work block, before
 switching agents, after a merge, and before leaving work another session may resume. This is **not a
 background daemon and has no timer**: a reminder appears only when `checkpoint`, `handoff`, `resume`,

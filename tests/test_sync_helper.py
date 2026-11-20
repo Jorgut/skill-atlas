@@ -49,6 +49,7 @@ class SyncHelperTests(unittest.TestCase):
         self.assertTrue(p["app"].is_dir())
         config = json.loads(p["config"].read_text())
         self.assertEqual(config["interval"], 900)
+        self.assertEqual(config["dirty_min_files"], 20)
         self.assertTrue(Path(config["cli"]).name == "skill_atlas.py")
         plist = plistlib.loads(p["plist"].read_bytes())
         self.assertEqual(plist["Label"], sync_helper.LABEL)

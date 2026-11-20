@@ -161,6 +161,7 @@ class HandoffTests(unittest.TestCase):
             fetch=False,
             fetch_timeout=10,
             include_dirty=False,
+            dirty_min_files=1,
         )
         params.update(overrides)
         return argparse.Namespace(**params)
@@ -255,6 +256,33 @@ class HandoffTests(unittest.TestCase):
                 project=[str(self.project)], idle_minutes=15,
                 log=str(self.project / "notify2.log")))
         self.assertEqual(result["status"], "notified")
+
+    def test_sync_summary_suggests_commit(self):
+        for index in range(22):
+            (self.project / f"dirty-{index}.txt").write_text("x\n")
+        summary = agent_handoff.sync_summary(self.project)
+        self.assertEqual(summary["dirty"], 22)
+        self.assertTrue(summary["commit_suggested"])
+        self.assertTrue(summary["checkpoint_suggested"])
+        self.assertIn("22 dirty", summary["summary"])
+
+    def test_sync_notify_dirty_threshold(self):
+        remote = self.make_remote()
+        git(self.project, "remote", "add", "origin", str(remote))
+        git(self.project, "push", "-q", "-u", "origin", "HEAD")
+        (self.project / "dirty-a.txt").write_text("a\n")
+        (self.project / "dirty-b.txt").write_text("b\n")
+        low = self.notify_options(project=[str(self.project)], include_dirty=True,
+                                  dirty_min_files=5, state=str(self.project / "dirty-low.json"),
+                                  log=str(self.project / "dirty-low.log"))
+        result = agent_handoff.sync_notify(low)
+        self.assertEqual(result["notified"], [])
+        high = self.notify_options(project=[str(self.project)], include_dirty=True,
+                                   dirty_min_files=2, state=str(self.project / "dirty-high.json"),
+                                   log=str(self.project / "dirty-high.log"))
+        result = agent_handoff.sync_notify(high)
+        self.assertEqual(result["status"], "notified")
+        self.assertTrue(any("uncommitted" in warning for item in result["notified"] for warning in item["warnings"]))
 
     def test_sync_notify_forced_digest_while_active(self):
         status = agent_handoff.sync_status(Path(self.project))
