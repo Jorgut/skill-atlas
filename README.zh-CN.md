@@ -604,4 +604,4 @@ python3 -m unittest discover -s tests -v
 
 ## 状态
 
-Skill Atlas 当前为 `0.16.3-beta`。在稳定版发布前，接口和平台适配器可能发生变化。
+Skill Atlas 当前为 `0.16.4-beta`。在稳定版发布前，接口和平台适配器可能发生变化。
