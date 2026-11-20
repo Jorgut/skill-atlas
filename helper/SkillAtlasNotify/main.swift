@@ -35,6 +35,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastError: String?
     private var refreshing = false
     private var promptedForAccess = false
+    private var floatingPanel: NSPanel?
+    private var floatingButton: NSButton?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -42,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.title = "SA"
         statusItem.button?.toolTip = "Skill Atlas sync monitor"
         statusItem.menu = NSMenu()
+        setupFloatingPanel()
         NSApp.activate(ignoringOtherApps: true)
         loadConfig()
         refresh()
@@ -60,6 +63,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             lastError = "Missing helper config: \(error.localizedDescription)"
         }
+    }
+
+    private func setupFloatingPanel() {
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 250, height: 48),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.level = .floating
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
+        panel.hidesOnDeactivate = false
+        let effect = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 250, height: 48))
+        effect.material = .hudWindow
+        effect.blendingMode = .behindWindow
+        effect.state = .active
+        effect.wantsLayer = true
+        effect.layer?.cornerRadius = 14
+        effect.layer?.masksToBounds = true
+        let button = NSButton(title: "Skill Atlas", target: self, action: #selector(showSummaryAction))
+        button.frame = NSRect(x: 10, y: 8, width: 230, height: 32)
+        button.isBordered = false
+        button.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        button.contentTintColor = .white
+        effect.addSubview(button)
+        panel.contentView = effect
+        floatingPanel = panel
+        floatingButton = button
+        positionFloatingPanel()
+    }
+
+    private func positionFloatingPanel() {
+        guard let panel = floatingPanel, let screen = NSScreen.main else { return }
+        let frame = screen.visibleFrame
+        panel.setFrameOrigin(NSPoint(x: frame.maxX - 270, y: frame.maxY - 64))
+    }
+
+    @objc private func showSummaryAction() {
+        showSummary()
+    }
+
+    private func showSummary() {
+        let alert = NSAlert()
+        if items.isEmpty && skippedItems.isEmpty {
+            alert.messageText = "Skill Atlas: all clean"
+            alert.informativeText = "No unpushed commits or unreadable projects."
+        } else {
+            alert.messageText = "Skill Atlas: \(items.count) issue(s)"
+            var lines = items.map { "\(URL(fileURLWithPath: $0.path).lastPathComponent) · \($0.branch): \($0.warnings.joined(separator: ", "))" }
+            lines += skippedItems.map { "Cannot read \(URL(fileURLWithPath: $0.project).lastPathComponent): \($0.reason)" }
+            alert.informativeText = lines.joined(separator: "\n")
+        }
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 
     private func schedule() {
@@ -177,6 +237,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func render() {
         let count = items.count
         let unreadable = lastError != nil || !skippedItems.isEmpty
+        if count > 0 || unreadable {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.dockTile.badgeLabel = count > 0 ? "\(count)" : "!"
+        } else {
+            NSApp.setActivationPolicy(.accessory)
+            NSApp.dockTile.badgeLabel = ""
+        }
+        if count > 0 || unreadable {
+            floatingButton?.title = "Skill Atlas · \(count > 0 ? String(count) : "!")"
+            floatingPanel?.orderFrontRegardless()
+            positionFloatingPanel()
+        } else {
+            floatingPanel?.orderOut(nil)
+        }
         statusItem.button?.title = count > 0 ? "SA \(count)" : (unreadable ? "SA !" : "SA")
         statusItem.button?.toolTip = count > 0
             ? "\(count) repository/worktree issue(s)"
@@ -243,6 +317,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quitItem.target = self
         menu.addItem(quitItem)
         statusItem.menu = menu
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showSummary()
+        return true
     }
 
     @objc private func grantAccess() { grantFileAccess() }
